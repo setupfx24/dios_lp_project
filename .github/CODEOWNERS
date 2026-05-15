@@ -1,0 +1,17 @@
+# Default
+*                                       @platform-team
+
+# Critical immutability surfaces — require review by leads
+/apps/api/src/database/migrations/      @platform-leads
+/apps/api/src/modules/trades/           @platform-leads
+/apps/api/src/modules/ledger/           @platform-leads
+/apps/api/src/modules/audit/            @platform-leads
+
+# Money handling
+/packages/utils/src/money.ts            @platform-leads
+/packages/utils/src/hash-chain.ts       @platform-leads
+
+# Security
+/SECURITY.md                            @security-team
+/docs/security.md                       @security-team
+/.github/                               @platform-leads

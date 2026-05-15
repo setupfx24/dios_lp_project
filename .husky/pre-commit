@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+# typescript-eslint's projectService loads each workspace's tsconfig fully
+# into memory. Per-workspace eslint can hit ~3GB; running several in parallel
+# OOMs even an 8GB-limit Node process pool on a 16GB box.
+# Raise heap and serialize the work below — see lint-staged.config.cjs.
+export NODE_OPTIONS="--max-old-space-size=8192 ${NODE_OPTIONS:-}"
+
+# --concurrent 1 = run all matched task groups sequentially. Slower but
+# bounded; safe on 16GB dev machines and CI runners alike.
+pnpm exec lint-staged --concurrent 1

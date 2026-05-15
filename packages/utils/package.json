@@ -1,0 +1,66 @@
+{
+  "name": "@lp/utils",
+  "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./money": {
+      "types": "./dist/money.d.ts",
+      "import": "./dist/money.js"
+    },
+    "./id": {
+      "types": "./dist/id.d.ts",
+      "import": "./dist/id.js"
+    },
+    "./time": {
+      "types": "./dist/time.d.ts",
+      "import": "./dist/time.js"
+    },
+    "./hash-chain": {
+      "types": "./dist/hash-chain.d.ts",
+      "import": "./dist/hash-chain.js"
+    },
+    "./hmac": {
+      "types": "./dist/hmac.d.ts",
+      "import": "./dist/hmac.js"
+    },
+    "./encryption": {
+      "types": "./dist/encryption.d.ts",
+      "import": "./dist/encryption.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rimraf dist",
+    "dev": "tsc -p tsconfig.build.json --watch",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@lp/types": "workspace:*",
+    "decimal.js": "10.4.3",
+    "ulid": "2.3.0"
+  },
+  "devDependencies": {
+    "@lp/eslint-config": "workspace:*",
+    "@lp/tsconfig": "workspace:*",
+    "@types/node": "20.16.10",
+    "@vitest/coverage-v8": "2.1.1",
+    "eslint": "9.11.1",
+    "rimraf": "6.0.1",
+    "typescript": "5.6.2",
+    "vitest": "2.1.1"
+  }
+}

@@ -1,0 +1,32 @@
+# Overrides for production-like local runs. Use:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up
+#
+# Production deployments should use IaC (Terraform / Pulumi / Helm) — this file
+# is for previewing the prod posture locally (no admin tools, no source mounts).
+
+name: lp-platform
+
+services:
+  pgadmin:
+    profiles: ['__never'] # disabled in prod-like
+  redis-commander:
+    profiles: ['__never']
+
+  api:
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: warn
+      SWAGGER_ENABLED: 'false'
+
+  workers:
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: warn
+
+  web:
+    environment:
+      NODE_ENV: production
+
+  admin:
+    environment:
+      NODE_ENV: production

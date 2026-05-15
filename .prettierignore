@@ -1,0 +1,9 @@
+node_modules/
+dist/
+build/
+.next/
+.turbo/
+coverage/
+**/migrations/**/*.sql
+pnpm-lock.yaml
+docs/api/openapi.json

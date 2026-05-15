@@ -1,0 +1,50 @@
+{
+  "name": "@lp/workers",
+  "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rimraf dist",
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@lp/constants": "workspace:*",
+    "@lp/types": "workspace:*",
+    "@lp/utils": "workspace:*",
+    "@lp/validators": "workspace:*",
+    "@nestjs/bullmq": "10.2.1",
+    "@nestjs/common": "10.4.4",
+    "@nestjs/config": "3.2.3",
+    "@nestjs/core": "10.4.4",
+    "@nestjs/event-emitter": "2.0.4",
+    "@nestjs/schedule": "4.1.1",
+    "bullmq": "5.13.2",
+    "drizzle-orm": "0.34.1",
+    "ioredis": "5.4.1",
+    "nestjs-pino": "4.1.0",
+    "pg": "8.13.0",
+    "pino": "9.4.0",
+    "pino-pretty": "11.2.2",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.1",
+    "ulid": "2.3.0",
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "@lp/eslint-config": "workspace:*",
+    "@lp/tsconfig": "workspace:*",
+    "@types/node": "20.16.10",
+    "@types/pg": "8.11.10",
+    "eslint": "9.11.1",
+    "rimraf": "6.0.1",
+    "tsx": "4.19.1",
+    "typescript": "5.6.2",
+    "vitest": "2.1.1"
+  }
+}

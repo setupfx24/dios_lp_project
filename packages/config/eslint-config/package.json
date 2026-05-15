@@ -1,0 +1,32 @@
+{
+  "name": "@lp/eslint-config",
+  "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./node": "./node.js",
+    "./nextjs": "./nextjs.js"
+  },
+  "files": [
+    "index.js",
+    "node.js",
+    "nextjs.js"
+  ],
+  "dependencies": {
+    "@eslint/js": "9.11.1",
+    "eslint-config-prettier": "9.1.0",
+    "eslint-plugin-import": "2.31.0",
+    "eslint-plugin-unused-imports": "4.1.4",
+    "globals": "15.9.0",
+    "typescript-eslint": "8.8.0"
+  },
+  "peerDependencies": {
+    "eslint": "^9.0.0"
+  },
+  "devDependencies": {
+    "eslint": "9.11.1"
+  }
+}

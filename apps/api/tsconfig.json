@@ -1,0 +1,18 @@
+{
+  "extends": "@lp/tsconfig/node.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "baseUrl": "./src",
+    "paths": {
+      "@/*": ["*"]
+    }
+  },
+  "include": ["src/**/*", "test/**/*"],
+  "exclude": ["node_modules", "dist"],
+  "references": [
+    { "path": "../../packages/types/tsconfig.build.json" },
+    { "path": "../../packages/constants/tsconfig.build.json" },
+    { "path": "../../packages/utils/tsconfig.build.json" },
+    { "path": "../../packages/validators/tsconfig.build.json" }
+  ]
+}

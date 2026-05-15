@@ -1,0 +1,40 @@
+{
+  "name": "@lp/validators",
+  "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rimraf dist",
+    "dev": "tsc -p tsconfig.build.json --watch",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@lp/constants": "workspace:*",
+    "@lp/types": "workspace:*",
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "@lp/eslint-config": "workspace:*",
+    "@lp/tsconfig": "workspace:*",
+    "@types/node": "20.16.10",
+    "eslint": "9.11.1",
+    "rimraf": "6.0.1",
+    "typescript": "5.6.2",
+    "vitest": "2.1.1"
+  }
+}

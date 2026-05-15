@@ -1,0 +1,14 @@
+{
+  "extends": "@lp/tsconfig/base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "lib": ["ES2022", "DOM"]
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"],
+  "references": [
+    { "path": "../types/tsconfig.build.json" },
+    { "path": "../validators/tsconfig.build.json" }
+  ]
+}
