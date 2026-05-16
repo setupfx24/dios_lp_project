@@ -210,6 +210,7 @@ export class AdminClient {
     actorId?: string | undefined;
     action?: string | undefined;
     resourceType?: string | undefined;
+    resourceId?: string | undefined;
     from?: string | undefined;
     to?: string | undefined;
     limit?: number | undefined;

@@ -60,8 +60,10 @@
   - New `AdminClient.listAudit(query)` with full typed envelope (incl. bigint → string coercion).
   - `apps/api AuditQueryController` now projects explicit columns and casts `id: bigint → string`, `createdAt: Date → ISO` at the JSON boundary — would have thrown on `JSON.stringify(bigint)` otherwise.
   - `apps/admin/src/features/audit/json-diff.tsx` — custom side-by-side recursive diff renderer (no extra dep). Handles primitives, arrays, objects, added/removed keys; coloring via Tailwind.
-  - `apps/admin/src/app/(admin)/audit/page.tsx` — filter form (actor / action / resourceType / from / to / limit), TanStack Query, table with expandable rows, JSON-diff for before/after, CSV export of currently-loaded rows.
+  - `apps/admin/src/app/(admin)/audit/page.tsx` — filter form (actor / action / resourceType / resourceId / from / to / limit), TanStack Query, table with expandable rows, JSON-diff for before/after, CSV export of currently-loaded rows.
   - `/audit` bundle: 145 B (stub) → 5.11 kB (full viewer).
+- [x] **8.4 Audit viewer — target broker filter** (gap closure)
+  - Spec called for "actor, action, date range, target broker"; original 8.3 implementation shipped only the first three. Added `resourceId` filter end-to-end: `AuditQueryController` Zod schema + WHERE clause, `AdminClient.listAudit` query type, admin page filter field labelled "Target ID (broker / wallet)". Typechecks clean across api / sdk / admin.
 
 **Out-of-scope, tracked but not committed to this iteration:**
 
@@ -75,3 +77,4 @@
 - **2026-05-16** — Completed 8.1 (admin e2e tests, 7 files for 8 of 9 concerns). 8.1.7 deferred to after 8.2. Also fixed pre-commit hook (memory + flat-config-discovery bugs) and added `0000_init.sql` migration.
 - **2026-05-16 (cont.)** — Completed 8.2 (packages/core dispatcher + ledger-ops port). 11 unit tests. api InterventionsController + workers ApprovalWatcher both call the same `executeWalletAdjust`. Added 8.1.7 e2e (`apps/workers/test/e2e/approval-watcher.e2e-spec.ts`).
 - **2026-05-16 (cont.)** — Completed 8.3 (audit JSONB diff viewer + filters + CSV). Fixed a latent bug in `AuditQueryController` (bigint id would have crashed JSON.stringify).
+- **2026-05-16 (cont.)** — Audit of prior session's claims against the spec: P1#1 (E2E suite) and P1#2 (dispatcher extraction) match spec end-to-end. P2 (audit viewer) was missing the spec-required "target broker" filter; closed as 8.4.

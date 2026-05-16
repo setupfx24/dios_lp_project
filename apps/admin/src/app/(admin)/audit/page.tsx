@@ -15,6 +15,7 @@ interface Filters {
   actorId: string;
   action: string;
   resourceType: string;
+  resourceId: string;
   from: string;
   to: string;
   limit: string;
@@ -40,6 +41,7 @@ export default function AuditPage() {
     actorId: '',
     action: '',
     resourceType: '',
+    resourceId: '',
     from: '',
     to: '',
     limit: '100',
@@ -54,6 +56,7 @@ export default function AuditPage() {
         actorId: filters.actorId || undefined,
         action: filters.action || undefined,
         resourceType: filters.resourceType || undefined,
+        resourceId: filters.resourceId || undefined,
         from: filters.from || undefined,
         to: filters.to || undefined,
         limit: Number(filters.limit) || 100,
@@ -111,6 +114,13 @@ export default function AuditPage() {
               placeholder="e.g. wallet"
             />
             <Field
+              id="resourceId"
+              label="Target ID (broker / wallet)"
+              value={pendingFilters.resourceId}
+              onChange={(v) => setPendingFilters({ ...pendingFilters, resourceId: v })}
+              placeholder="broker_id or other resource id"
+            />
+            <Field
               id="from"
               label="From (ISO)"
               value={pendingFilters.from}
@@ -139,6 +149,7 @@ export default function AuditPage() {
                     actorId: '',
                     action: '',
                     resourceType: '',
+                    resourceId: '',
                     from: '',
                     to: '',
                     limit: '100',

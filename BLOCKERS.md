@@ -121,3 +121,4 @@ a machine with Docker Desktop.
 
 - **B-002** (2026-05-16) — Dispatcher extracted to `packages/core`; both api and workers consume the same handlers via thin LedgerOps adapters. See header above for details.
 - **B-003** (2026-05-16) — Audit page built (filters + diff viewer + CSV export). See header above.
+- **B-006** (2026-05-16) — Audit viewer was missing the spec-required "target broker" filter (resourceId). Added end-to-end: controller schema/WHERE, SDK type, admin page field. Tracked as PROGRESS 8.4.

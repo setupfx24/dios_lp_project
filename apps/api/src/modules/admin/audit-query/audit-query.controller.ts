@@ -15,6 +15,7 @@ const querySchema = z.object({
   actorId: z.string().optional(),
   action: z.string().optional(),
   resourceType: z.string().optional(),
+  resourceId: z.string().optional(),
   from: z.string().optional(),
   to: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(500).default(100),
@@ -39,6 +40,9 @@ export class AuditQueryController {
     }
     if (q.resourceType) {
       conds.push(eq(auditLogs.resourceType, q.resourceType));
+    }
+    if (q.resourceId) {
+      conds.push(eq(auditLogs.resourceId, q.resourceId));
     }
     if (q.from) {
       conds.push(gte(auditLogs.createdAt, new Date(q.from)));
