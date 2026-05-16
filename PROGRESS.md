@@ -56,7 +56,12 @@
 
 **Priority 2** (next sprint):
 
-- [ ] **8.3 Audit JSONB diff viewer** — render `before_state` / `after_state` side-by-side in `apps/admin/audit`. Filters: actor / action / date / broker. CSV export with filters applied.
+- [x] **8.3 Audit JSONB diff viewer**
+  - New `AdminClient.listAudit(query)` with full typed envelope (incl. bigint → string coercion).
+  - `apps/api AuditQueryController` now projects explicit columns and casts `id: bigint → string`, `createdAt: Date → ISO` at the JSON boundary — would have thrown on `JSON.stringify(bigint)` otherwise.
+  - `apps/admin/src/features/audit/json-diff.tsx` — custom side-by-side recursive diff renderer (no extra dep). Handles primitives, arrays, objects, added/removed keys; coloring via Tailwind.
+  - `apps/admin/src/app/(admin)/audit/page.tsx` — filter form (actor / action / resourceType / from / to / limit), TanStack Query, table with expandable rows, JSON-diff for before/after, CSV export of currently-loaded rows.
+  - `/audit` bundle: 145 B (stub) → 5.11 kB (full viewer).
 
 **Out-of-scope, tracked but not committed to this iteration:**
 
@@ -69,3 +74,4 @@
 - **2026-05-15 (current)** — Phase 8 gap closure. Bootstrapped tracking docs from prior summary; baseline commit; beginning 8.1.
 - **2026-05-16** — Completed 8.1 (admin e2e tests, 7 files for 8 of 9 concerns). 8.1.7 deferred to after 8.2. Also fixed pre-commit hook (memory + flat-config-discovery bugs) and added `0000_init.sql` migration.
 - **2026-05-16 (cont.)** — Completed 8.2 (packages/core dispatcher + ledger-ops port). 11 unit tests. api InterventionsController + workers ApprovalWatcher both call the same `executeWalletAdjust`. Added 8.1.7 e2e (`apps/workers/test/e2e/approval-watcher.e2e-spec.ts`).
+- **2026-05-16 (cont.)** — Completed 8.3 (audit JSONB diff viewer + filters + CSV). Fixed a latent bug in `AuditQueryController` (bigint id would have crashed JSON.stringify).

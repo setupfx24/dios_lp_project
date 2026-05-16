@@ -205,6 +205,47 @@ export class AdminClient {
     );
   }
 
+  // -------- Audit --------
+  listAudit(query: {
+    actorId?: string | undefined;
+    action?: string | undefined;
+    resourceType?: string | undefined;
+    from?: string | undefined;
+    to?: string | undefined;
+    limit?: number | undefined;
+  }) {
+    const params = new URLSearchParams();
+    for (const [k, v] of Object.entries(query)) {
+      if (v !== undefined && v !== '') {
+        params.set(k, String(v));
+      }
+    }
+    return this.request(
+      `/api/v1/admin/audit/logs?${params.toString()}`,
+      { method: 'GET' },
+      z.object({
+        items: z.array(
+          z.object({
+            id: z.union([z.string(), z.number(), z.bigint()]).transform((v) => String(v)),
+            auditId: z.string(),
+            actorType: z.enum(['user', 'broker_api', 'system']),
+            actorId: z.string(),
+            action: z.string(),
+            resourceType: z.string().nullable(),
+            resourceId: z.string().nullable(),
+            outcome: z.enum(['success', 'failure']),
+            metadata: z.record(z.unknown()).nullable(),
+            ipAddress: z.string().nullable(),
+            userAgent: z.string().nullable(),
+            createdAt: z
+              .union([z.string(), z.date()])
+              .transform((v) => (v instanceof Date ? v.toISOString() : v)),
+          }),
+        ),
+      }),
+    );
+  }
+
   // -------- Operations --------
   operationsMetrics() {
     return this.request(

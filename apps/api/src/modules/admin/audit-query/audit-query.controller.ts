@@ -48,12 +48,33 @@ export class AuditQueryController {
     }
 
     const where = conds.length > 0 ? and(...conds) : undefined;
-    const items = await this.db
-      .select()
+    const rows = await this.db
+      .select({
+        // `id` is bigint in DB — coerce to string at the JSON boundary so
+        // JSON.stringify doesn't choke. UI uses `auditId` as the key anyway.
+        id: auditLogs.id,
+        auditId: auditLogs.auditId,
+        actorType: auditLogs.actorType,
+        actorId: auditLogs.actorId,
+        action: auditLogs.action,
+        resourceType: auditLogs.resourceType,
+        resourceId: auditLogs.resourceId,
+        outcome: auditLogs.outcome,
+        metadata: auditLogs.metadata,
+        ipAddress: auditLogs.ipAddress,
+        userAgent: auditLogs.userAgent,
+        createdAt: auditLogs.createdAt,
+      })
       .from(auditLogs)
       .where(where ?? undefined)
       .orderBy(desc(auditLogs.id))
       .limit(q.limit);
+
+    const items = rows.map((r) => ({
+      ...r,
+      id: r.id.toString(),
+      createdAt: r.createdAt.toISOString(),
+    }));
     return { items };
   }
 }

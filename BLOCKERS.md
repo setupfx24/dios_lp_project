@@ -61,20 +61,23 @@ B-005).
 
 ---
 
-### B-003 — Audit page is a stub
+### B-003 — Audit page (CLOSED)
 
-**Symptom.** `apps/admin/src/app/(admin)/audit/page.tsx` renders only a
-description. No filters, no diff view, no CSV export.
+**Symptom (original).** `audit/page.tsx` was a stub — no filters, no
+diff, no export.
 
-**Root cause.** Out of scope of the admin scaffold.
+**Resolution.** Full audit viewer built:
 
-**Risk.** Operators cannot use the audit log productively from the UI —
-they must SQL into the DB.
+- `AdminClient.listAudit(query)` (typed envelope, bigint→string coercion)
+- `apps/api AuditQueryController` projects explicit columns and casts
+  `id: bigint → string` (this also fixed a latent JSON.stringify bug)
+- `apps/admin/src/features/audit/json-diff.tsx` — custom side-by-side
+  recursive diff renderer
+- `apps/admin/src/app/(admin)/audit/page.tsx` — filter form
+  (actor / action / resourceType / from / to / limit), TanStack Query,
+  expandable rows with before/after diff, CSV export of loaded rows
 
-**Next action.** Task 8.3 — build the diff viewer with filters and
-CSV export.
-
-**Owner.** Current session (after 8.1 and 8.2).
+**Owner.** Closed.
 
 ---
 
@@ -117,3 +120,4 @@ a machine with Docker Desktop.
 ## Resolved
 
 - **B-002** (2026-05-16) — Dispatcher extracted to `packages/core`; both api and workers consume the same handlers via thin LedgerOps adapters. See header above for details.
+- **B-003** (2026-05-16) — Audit page built (filters + diff viewer + CSV export). See header above.
