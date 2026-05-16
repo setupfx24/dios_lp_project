@@ -13,6 +13,7 @@
     { "path": "../../packages/types/tsconfig.build.json" },
     { "path": "../../packages/constants/tsconfig.build.json" },
     { "path": "../../packages/utils/tsconfig.build.json" },
-    { "path": "../../packages/validators/tsconfig.build.json" }
+    { "path": "../../packages/validators/tsconfig.build.json" },
+    { "path": "../../packages/core/tsconfig.build.json" }
   ]
 }

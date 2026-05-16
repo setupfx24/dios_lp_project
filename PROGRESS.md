@@ -22,8 +22,8 @@
 
 ## Counts
 
-- 9 workspace projects (5 packages, 4 apps)
-- 109 unit tests passing (utils 88, validators 9, api 12)
+- 10 workspace projects (6 packages, 4 apps)
+- 120 unit tests passing (utils 88, validators 9, core 11, api 12)
 - 1 e2e test file (`apps/api/test/e2e/trades-chain.e2e-spec.ts`) — chain integrity + lp_app trigger enforcement
 - Admin app: 11 routes (login, two-factor, recovery, operations, brokers, interventions, approvals, audit, users, /, \_not-found)
 - Web app: 5 routes
@@ -39,12 +39,20 @@
   - [x] 8.1.3 Audit-in-tx atomicity (`admin-audit-in-tx.e2e-spec.ts`)
   - [x] 8.1.4 4-eyes self-approval rejected at all three layers (`admin-4eyes-self-approval.e2e-spec.ts`)
   - [x] 8.1.5 + 8.1.6 Wallet adjust threshold routing (`admin-wallet-adjust-threshold.e2e-spec.ts`)
-  - [ ] 8.1.7 Approved action → executes via worker dispatcher — **deferred to after 8.2**
+  - [x] 8.1.7 Approved action → executes via worker dispatcher (`apps/workers/test/e2e/approval-watcher.e2e-spec.ts`) — completed as part of 8.2
   - [x] 8.1.8 Admin session idle 15+ min → rejected (`admin-idle-timeout.e2e-spec.ts`)
   - [x] 8.1.9 Broker cookie → admin endpoint rejected (`admin-cookie-isolation.e2e-spec.ts`)
   - Helpers: `test/helpers/e2e-app.ts`, Redis-enabled `test/helpers/testcontainers.ts`, `test/helpers/fixtures.ts`
   - **Caveat: not executed end-to-end this session.** Typecheck + lint clean. Requires Docker to run via `pnpm --filter @lp/api test:e2e`.
-- [ ] **8.2 Dispatcher extraction → `packages/core`** — single `dispatch(action)` consumed by both `apps/api` (synchronous below-threshold path) and `apps/workers` `ApprovalWatcher` (async post-approval). Unit tests in `packages/core`. Unblocks 8.1.7.
+- [x] **8.2 Dispatcher extraction → `packages/core`**
+  - `LedgerOps` interface in `packages/core/src/ledger-ops.ts` — small port for ledger writes; no Drizzle / no pg leaks into action handlers.
+  - `executeWalletAdjust(payload, ops)` — single source of truth for wallet-adjust execution.
+  - `dispatch(action, ops)` — routes pending actions to handlers, returns tagged union.
+  - 11 unit tests in `packages/core` (6 wallet-adjust, 5 dispatcher with placeholder action types).
+  - `apps/api`: `InterventionsController.walletAdjust` now calls `executeWalletAdjust` via a new `drizzleLedgerOps(repo, tx)` adapter — no more duplicated ledger code.
+  - `apps/workers`: `ApprovalWatcher` now genuinely dispatches approved actions inside its own transaction via `pgLedgerOps(client)`, with success/failure audit rows.
+  - 8.1.7 added at `apps/workers/test/e2e/approval-watcher.e2e-spec.ts` (3 tests covering approved→executed, no-op re-poll, and stale expiry).
+  - **Caveat:** the e2e file is typecheck + lint clean but Docker-dependent; not executed this session.
 
 **Priority 2** (next sprint):
 
@@ -60,3 +68,4 @@
 - **2026-05-15 (prior)** — Phases 1–F. End-of-session summary archived in `docs/sessions/2026-05-15-summary.md`.
 - **2026-05-15 (current)** — Phase 8 gap closure. Bootstrapped tracking docs from prior summary; baseline commit; beginning 8.1.
 - **2026-05-16** — Completed 8.1 (admin e2e tests, 7 files for 8 of 9 concerns). 8.1.7 deferred to after 8.2. Also fixed pre-commit hook (memory + flat-config-discovery bugs) and added `0000_init.sql` migration.
+- **2026-05-16 (cont.)** — Completed 8.2 (packages/core dispatcher + ledger-ops port). 11 unit tests. api InterventionsController + workers ApprovalWatcher both call the same `executeWalletAdjust`. Added 8.1.7 e2e (`apps/workers/test/e2e/approval-watcher.e2e-spec.ts`).

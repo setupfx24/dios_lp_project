@@ -29,24 +29,35 @@ isolation, fixture cleanup between specs). Tracked separately as B-005.
 
 ---
 
-### B-002 — Dispatcher logic duplicated between api and workers stub
+### B-002 — Dispatcher extraction (CLOSED)
 
-**Symptom.** `apps/api/.../interventions.controller.ts` executes the
-below-threshold wallet-adjust path inline. `apps/workers/.../approval-watcher.ts`
-_marks_ approved actions as executed but the actual dispatch is a stub.
+**Symptom (original).** Wallet-adjust execution was inline in
+`apps/api InterventionsController`; `apps/workers ApprovalWatcher` only
+marked approved rows as `executed` without performing any state change.
 
-**Root cause.** Avoiding cross-app imports without first extracting a
-shared package.
+**Resolution.** `packages/core` created with:
 
-**Risk.** The above-threshold path (after admin approval) currently
-performs no state change. Below-threshold and post-approval-execute
-paths cannot diverge silently if they share code.
+- `LedgerOps` port (`packages/core/src/ledger-ops.ts`)
+- `executeWalletAdjust(payload, ops)` action handler
+- `dispatch(action, ops)` router with tagged-union result
+- 11 unit tests
 
-**Next action.** Task 8.2 — create `packages/core` with a typed
-`dispatch(action)` consumed by both call sites. Unit tests in
-`packages/core`; e2e in 8.1.7.
+`apps/api`: `InterventionsController.walletAdjust` calls
+`executeWalletAdjust` via `drizzleLedgerOps(repo, tx)`.
 
-**Owner.** Current session.
+`apps/workers`: `ApprovalWatcher.executeOne` claims the row, calls
+`dispatch(action, { ledger: pgLedgerOps(client) })`, writes a success
+audit row, commits — all in one transaction. Failures roll back the
+state change and emit a failure audit outside the rolled-back tx for
+forensic context.
+
+8.1.7 e2e (`apps/workers/test/e2e/approval-watcher.e2e-spec.ts`)
+verifies the end-to-end approved → executed flow.
+
+**Caveat.** E2E unverified against a live Postgres this session (still
+B-005).
+
+**Owner.** Closed.
 
 ---
 
@@ -67,19 +78,19 @@ CSV export.
 
 ---
 
-### B-005 — Admin E2E tests not yet run end-to-end
+### B-005 — E2E tests not yet run end-to-end
 
-**Symptom.** All 7 admin e2e test files added in 8.1 are typecheck +
-lint clean but `pnpm --filter @lp/api test:e2e` has not been executed
-in this session (no Docker on the dev host).
+**Symptom.** 8 e2e test files (7 in `apps/api/test/e2e/admin/` +
+1 in `apps/workers/test/e2e/`) are typecheck + lint clean but neither
+`pnpm --filter @lp/api test:e2e` nor `pnpm --filter @lp/workers test:e2e`
+has been executed in this session (no Docker on the dev host).
 
 **Risk.** Authored tests can have subtle issues that only surface on
-first run: shared-state between specs that all use the same
-`startE2EApp()` helper, fixture cleanup, Fastify cookie path matching
-against `/api/v1/admin` prefix in the helper, etc.
+first run: shared state between specs that share a `startE2EApp()`
+handle, fixture cleanup, Fastify cookie path matching, etc.
 
-**Next action.** Run `pnpm --filter @lp/api test:e2e` on a
-Docker-equipped host; fix surface-level issues; mark resolved.
+**Next action.** Run both `test:e2e` targets on a Docker-equipped host;
+fix surface-level issues; mark resolved.
 
 **Owner.** Operator / next session with Docker access.
 
@@ -96,11 +107,13 @@ scope for the code work.
 pattern that worked in prior projects. But a build-time failure in any
 of the four Dockerfiles wouldn't surface until first deploy.
 
-**Next action.** Out of scope of Phase 8. Re-validate on a CI runner or
+**Next action.** Update B-005 to include workers `test:e2e` too: same Docker dependency.
+
+Out of scope of Phase 8. Re-validate on a CI runner or
 a machine with Docker Desktop.
 
 **Owner.** Operator (defer).
 
 ## Resolved
 
-(none yet)
+- **B-002** (2026-05-16) — Dispatcher extracted to `packages/core`; both api and workers consume the same handlers via thin LedgerOps adapters. See header above for details.

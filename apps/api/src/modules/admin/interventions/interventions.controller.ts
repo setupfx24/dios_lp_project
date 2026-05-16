@@ -3,15 +3,16 @@ import { ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
 
 import { ErrorCode } from '@lp/constants';
-import { ulid } from '@lp/utils/id';
+import { executeWalletAdjust } from '@lp/core';
 import { Money } from '@lp/utils/money';
 
 import { DomainException } from '../../../common/exceptions/domain.exception.js';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
 import { AppConfigService } from '../../../config/config.module.js';
+import { drizzleLedgerOps } from '../../ledger/drizzle-ledger-ops.js';
 import { LedgerRepository } from '../../ledger/ledger.repository.js';
 import { PendingActionsRepository } from '../approvals/pending-actions.repository.js';
-import { requireAudit, type AdminRequestContext } from '../common/admin-context.js';
+import { requireAudit, requireTx, type AdminRequestContext } from '../common/admin-context.js';
 import { AdminCtx, AuditLog, RequireAdminRole, RequireReauth } from '../common/admin-decorators.js';
 import { AdminJwtGuard } from '../common/admin-jwt.guard.js';
 import { AdminRoleGuard } from '../common/admin-role.guard.js';
@@ -38,10 +39,13 @@ export class InterventionsController {
   ) {}
 
   /**
-   * Adjust a broker's wallet. Below threshold: executes immediately as a
-   * double-entry posting. Above threshold: enqueues to pending_actions for
-   * a second admin to approve. Either branch writes an audit row in the
-   * same transaction as its state change.
+   * Adjust a broker's wallet. Below threshold: executes immediately via the
+   * shared @lp/core dispatcher. Above threshold: enqueues to pending_actions
+   * for a second admin to approve — the workers process executes via the
+   * SAME @lp/core handler when the approval lands.
+   *
+   * Either branch writes an audit row in the same transaction as its state
+   * change (audit-in-tx interceptor).
    */
   @Post('wallet-adjust')
   @RequireReauth()
@@ -53,10 +57,7 @@ export class InterventionsController {
   ): Promise<
     { status: 'executed'; entryIds: string[] } | { status: 'queued_for_approval'; actionId: string }
   > {
-    const tx = ctx.tx;
-    if (!tx) {
-      throw new Error('wallet-adjust requires tx context');
-    }
+    const tx = requireTx(ctx);
 
     const amount = new Money(body.amount);
     if (amount.isZero() || amount.isNegative()) {
@@ -96,35 +97,18 @@ export class InterventionsController {
       return { status: 'queued_for_approval', actionId: created.actionId };
     }
 
-    const wallet = await this.ledger.findOrCreateWallet(body.brokerId, body.currency, tx);
-    const refId = ulid();
-    const legs = await this.ledger.postPair(
+    const result = await executeWalletAdjust(
       {
-        walletId: wallet.walletId,
+        brokerId: body.brokerId,
         direction: body.direction,
         amount: amount.toString(),
         currency: body.currency,
-        referenceType: 'ADJUSTMENT',
-        referenceId: refId,
-        description: `admin adjust: ${body.reason}`,
+        reason: body.reason,
       },
-      {
-        // Contra-leg booked against the broker's own wallet — net-zero against
-        // an internal "operations" virtual wallet would be ideal in production.
-        // For scaffolding we mirror it as the inverse direction to keep
-        // double-entry constraints valid.
-        walletId: wallet.walletId,
-        direction: body.direction === 'DEBIT' ? 'CREDIT' : 'DEBIT',
-        amount: amount.toString(),
-        currency: body.currency,
-        referenceType: 'ADJUSTMENT',
-        referenceId: refId,
-        description: `admin adjust (contra): ${body.reason}`,
-      },
-      tx,
+      drizzleLedgerOps(this.ledger, tx),
     );
 
-    const entryIds = legs.map((l) => l.entryId);
+    const entryIds = [...result.entryIds];
     ctx.audit.afterState = { status: 'executed', entryIds };
     return { status: 'executed', entryIds };
   }

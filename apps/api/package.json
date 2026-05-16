@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@lp/constants": "workspace:*",
+    "@lp/core": "workspace:*",
     "@lp/types": "workspace:*",
     "@lp/utils": "workspace:*",
     "@lp/validators": "workspace:*",
