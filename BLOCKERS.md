@@ -8,20 +8,24 @@
 
 ### B-001 — No admin-flow E2E coverage
 
-**Symptom.** Backend admin module (`AdminJwtGuard`, `TotpVerifiedGuard`,
-`ReauthGuard`, `AdminRoleGuard`, `AuditLogInterceptor`, 4-eyes self-approval
-checks) has no integration tests. Unit tests cover charges and risk only.
+**Symptom (original).** Backend admin module had no integration tests.
 
-**Root cause.** Phase A focused on building the surface; e2e was deferred.
+**Resolution this session.** Added 7 e2e test files covering 8 of the 9
+listed concerns (2FA setup/verify, wrong-code rejection, audit-in-tx
+atomicity, 4-eyes self-approval at all three layers, threshold routing,
+idle timeout, cross-cookie isolation). Also added the missing
+`0000_init.sql` migration so e2e tests have tables to operate on.
 
-**Risk.** A guard regression (e.g., a future PR loosening a check) could
-ship without detection. Audit-in-tx atomicity (action + audit rollback
-together) is structurally correct but unverified end-to-end.
+**Remaining gap.** 8.1.7 (approved action → executes via worker
+dispatcher) requires the dispatcher to exist — depends on B-002.
+Will be added immediately after 8.2.
 
-**Next action.** Task 8.1 — write 8–10 e2e files using existing
-`testcontainers.ts`. Each file is one concern.
+**Caveat.** Tests typecheck + lint clean but were NOT executed
+end-to-end this session (no Docker on this dev machine). First run on a
+Docker-equipped host will likely surface minor adjustments (test
+isolation, fixture cleanup between specs). Tracked separately as B-005.
 
-**Owner.** Current session.
+**Owner.** Closed pending B-002 + B-005.
 
 ---
 
@@ -60,6 +64,24 @@ they must SQL into the DB.
 CSV export.
 
 **Owner.** Current session (after 8.1 and 8.2).
+
+---
+
+### B-005 — Admin E2E tests not yet run end-to-end
+
+**Symptom.** All 7 admin e2e test files added in 8.1 are typecheck +
+lint clean but `pnpm --filter @lp/api test:e2e` has not been executed
+in this session (no Docker on the dev host).
+
+**Risk.** Authored tests can have subtle issues that only surface on
+first run: shared-state between specs that all use the same
+`startE2EApp()` helper, fixture cleanup, Fastify cookie path matching
+against `/api/v1/admin` prefix in the helper, etc.
+
+**Next action.** Run `pnpm --filter @lp/api test:e2e` on a
+Docker-equipped host; fix surface-level issues; mark resolved.
+
+**Owner.** Operator / next session with Docker access.
 
 ---
 

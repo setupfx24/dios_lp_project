@@ -32,17 +32,19 @@
 
 **Priority 1** (production blockers):
 
-- [ ] **8.1 Admin E2E tests** — 8–10 files in `apps/api/test/e2e/admin/` using existing `testcontainers.ts`:
-  - 8.1.1 2FA setup + verify happy path
-  - 8.1.2 2FA verify with wrong code → rejected
-  - 8.1.3 Audit-in-tx atomicity: force audit insert failure → state change rolled back
-  - 8.1.4 4-eyes self-approval rejected at all three layers (app, SQL, CHECK)
-  - 8.1.5 Wallet adjustment below threshold → executes immediately
-  - 8.1.6 Wallet adjustment above threshold → queues for approval
-  - 8.1.7 Approved action → executes via worker dispatcher
-  - 8.1.8 Admin session idle 15+ min → next request rejected
-  - 8.1.9 Broker JWT cookie sent to `/api/v1/admin/*` → rejected (cross-cookie isolation)
-- [ ] **8.2 Dispatcher extraction → `packages/core`** — single `dispatch(action)` consumed by both `apps/api` (synchronous below-threshold path) and `apps/workers` `ApprovalWatcher` (async post-approval). Unit tests in `packages/core`.
+- [x] **8.1 Admin E2E tests** — files in `apps/api/test/e2e/admin/` using `testcontainers.ts`:
+  - [x] 8.1.0 Hand-written `0000_init.sql` migration (drizzle-kit blocked by .js imports — see ADR-0005). Unblocks ALL e2e work.
+  - [x] 8.1.1 2FA setup + verify happy path (`admin-2fa-setup.e2e-spec.ts`)
+  - [x] 8.1.2 2FA verify with wrong code → rejected (`admin-2fa-wrong-code.e2e-spec.ts`)
+  - [x] 8.1.3 Audit-in-tx atomicity (`admin-audit-in-tx.e2e-spec.ts`)
+  - [x] 8.1.4 4-eyes self-approval rejected at all three layers (`admin-4eyes-self-approval.e2e-spec.ts`)
+  - [x] 8.1.5 + 8.1.6 Wallet adjust threshold routing (`admin-wallet-adjust-threshold.e2e-spec.ts`)
+  - [ ] 8.1.7 Approved action → executes via worker dispatcher — **deferred to after 8.2**
+  - [x] 8.1.8 Admin session idle 15+ min → rejected (`admin-idle-timeout.e2e-spec.ts`)
+  - [x] 8.1.9 Broker cookie → admin endpoint rejected (`admin-cookie-isolation.e2e-spec.ts`)
+  - Helpers: `test/helpers/e2e-app.ts`, Redis-enabled `test/helpers/testcontainers.ts`, `test/helpers/fixtures.ts`
+  - **Caveat: not executed end-to-end this session.** Typecheck + lint clean. Requires Docker to run via `pnpm --filter @lp/api test:e2e`.
+- [ ] **8.2 Dispatcher extraction → `packages/core`** — single `dispatch(action)` consumed by both `apps/api` (synchronous below-threshold path) and `apps/workers` `ApprovalWatcher` (async post-approval). Unit tests in `packages/core`. Unblocks 8.1.7.
 
 **Priority 2** (next sprint):
 
@@ -57,3 +59,4 @@
 
 - **2026-05-15 (prior)** — Phases 1–F. End-of-session summary archived in `docs/sessions/2026-05-15-summary.md`.
 - **2026-05-15 (current)** — Phase 8 gap closure. Bootstrapped tracking docs from prior summary; baseline commit; beginning 8.1.
+- **2026-05-16** — Completed 8.1 (admin e2e tests, 7 files for 8 of 9 concerns). 8.1.7 deferred to after 8.2. Also fixed pre-commit hook (memory + flat-config-discovery bugs) and added `0000_init.sql` migration.

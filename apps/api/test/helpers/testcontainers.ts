@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import pg from 'pg';
-import { GenericContainer, type StartedTestContainer } from 'testcontainers';
+import { GenericContainer, Wait, type StartedTestContainer } from 'testcontainers';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const migrationsFolder = resolve(here, '../../src/database/migrations');
@@ -75,4 +75,23 @@ export function appUserUrl(h: DbHandle): string {
   url.username = 'lp_app';
   url.password = 'changeme_in_compose_env';
   return url.toString();
+}
+
+export interface RedisHandle {
+  container: StartedTestContainer;
+  url: string;
+}
+
+export async function startTestRedis(): Promise<RedisHandle> {
+  const container = await new GenericContainer('redis:7-alpine')
+    .withExposedPorts(6379)
+    .withWaitStrategy(Wait.forLogMessage('Ready to accept connections'))
+    .withStartupTimeout(60_000)
+    .start();
+  const url = `redis://${container.getHost()}:${container.getMappedPort(6379)}`;
+  return { container, url };
+}
+
+export async function stopTestRedis(h: RedisHandle): Promise<void> {
+  await h.container.stop({ timeout: 5_000 });
 }
