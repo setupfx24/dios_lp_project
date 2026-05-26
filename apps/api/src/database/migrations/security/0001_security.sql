@@ -10,13 +10,42 @@
 -- =============================================================================
 
 -- ---------- Roles ----------
+-- Passwords are sourced from Postgres custom GUCs `lp.app_pw` and `lp.ro_pw`.
+-- docker-compose passes these via `-c lp.app_pw=$LP_APP_PW`. The migration
+-- refuses to run if either GUC is missing, too short, or still set to the
+-- documented .env.example placeholder — running this against prod with the
+-- placeholder would create roles with a publicly-known password (B3).
+-- On re-run the password is rotated via ALTER ROLE.
 DO $$
+DECLARE
+  app_pw text := current_setting('lp.app_pw', true);
+  ro_pw  text := current_setting('lp.ro_pw', true);
 BEGIN
+  IF app_pw IS NULL OR app_pw = '' THEN
+    RAISE EXCEPTION 'lp.app_pw GUC is not set. Pass via Postgres -c lp.app_pw=<random>; in docker-compose use the LP_APP_PW env var.';
+  END IF;
+  IF ro_pw IS NULL OR ro_pw = '' THEN
+    RAISE EXCEPTION 'lp.ro_pw GUC is not set. Pass via Postgres -c lp.ro_pw=<random>; in docker-compose use the LP_RO_PW env var.';
+  END IF;
+  IF length(app_pw) < 12 THEN
+    RAISE EXCEPTION 'lp.app_pw must be at least 12 characters (got %)', length(app_pw);
+  END IF;
+  IF length(ro_pw) < 12 THEN
+    RAISE EXCEPTION 'lp.ro_pw must be at least 12 characters (got %)', length(ro_pw);
+  END IF;
+  IF app_pw = 'changeme_in_compose_env' OR ro_pw = 'changeme_in_compose_env' THEN
+    RAISE EXCEPTION 'lp.app_pw or lp.ro_pw is still the .env.example placeholder. Generate a fresh random value before running migrations against any non-throwaway database.';
+  END IF;
+
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'lp_app') THEN
-    CREATE ROLE lp_app LOGIN PASSWORD 'changeme_in_compose_env';
+    EXECUTE format('CREATE ROLE lp_app LOGIN PASSWORD %L', app_pw);
+  ELSE
+    EXECUTE format('ALTER ROLE lp_app WITH PASSWORD %L', app_pw);
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'lp_readonly') THEN
-    CREATE ROLE lp_readonly LOGIN PASSWORD 'changeme_in_compose_env';
+    EXECUTE format('CREATE ROLE lp_readonly LOGIN PASSWORD %L', ro_pw);
+  ELSE
+    EXECUTE format('ALTER ROLE lp_readonly WITH PASSWORD %L', ro_pw);
   END IF;
 END $$;
 

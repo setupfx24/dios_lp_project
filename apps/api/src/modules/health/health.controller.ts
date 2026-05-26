@@ -1,5 +1,6 @@
 import { Controller, Get, Inject } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import { Redis } from 'ioredis';
 
 import { PG_POOL } from '../../database/connection.js';
@@ -17,6 +18,10 @@ interface HealthResponse {
 }
 
 @ApiTags('health')
+// Liveness / readiness checks must not be rate-limited — orchestrators
+// (k8s, docker swarm, your monitoring) poll this frequently and a 429
+// here causes them to mark the API down and start restarting pods.
+@SkipThrottle()
 @Controller('health')
 export class HealthController {
   private readonly startedAt = Date.now();

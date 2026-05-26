@@ -1,15 +1,7 @@
 import { InjectQueue } from '@nestjs/bullmq';
-import {
-  Body,
-  Controller,
-  HttpCode,
-  HttpStatus,
-  Post,
-  Req,
-  UseGuards,
-  UsePipes,
-} from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 
 import { ErrorCode } from '@lp/constants';
 import { orderRequestSchema, type OrderRequest } from '@lp/validators';
@@ -33,6 +25,12 @@ export interface OrderJobData {
 @ApiTags('broker/orders')
 @ApiSecurity('hmac')
 @UseGuards(HmacGuard)
+// HMAC auth runs before the controller body; an attacker without a valid
+// (prefix, secret) can't reach the throttler at all. Throttling here would
+// only hurt legitimate brokers (DIOS submits hundreds of orders per minute
+// at market open). If per-broker throttling becomes necessary, replace the
+// global ThrottlerGuard with a custom guard keyed on req.broker.brokerId.
+@SkipThrottle()
 @Controller('api/v1/broker/orders')
 export class OrdersController {
   constructor(
@@ -43,9 +41,8 @@ export class OrdersController {
 
   @Post()
   @HttpCode(HttpStatus.ACCEPTED)
-  @UsePipes(new ZodValidationPipe(orderRequestSchema))
   async place(
-    @Body() dto: OrderRequest,
+    @Body(new ZodValidationPipe(orderRequestSchema)) dto: OrderRequest,
     @Req() req: FastifyRequest,
   ): Promise<{ orderId: string; status: 'ACCEPTED' }> {
     const broker = req.broker;

@@ -84,4 +84,31 @@ export class TradesRepository {
     const rows = await this.db.select({ c: sql<string>`count(*)::text` }).from(trades);
     return Number(rows[0]?.c ?? '0');
   }
+
+  async statsForBroker(brokerId: string): Promise<{
+    totalTrades: number;
+    totalTurnover: string;
+    totalQuantity: string;
+    distinctSymbols: number;
+    lastExecutedAt: string | null;
+  }> {
+    const rows = await this.db
+      .select({
+        totalTrades: sql<string>`count(*)::text`,
+        totalTurnover: sql<string>`coalesce(sum(quantity * price), 0)::text`,
+        totalQuantity: sql<string>`coalesce(sum(quantity), 0)::text`,
+        distinctSymbols: sql<string>`count(distinct symbol)::text`,
+        lastExecutedAt: sql<string | null>`to_char(max(executed_at), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')`,
+      })
+      .from(trades)
+      .where(eq(trades.brokerId, brokerId));
+    const r = rows[0];
+    return {
+      totalTrades: Number(r?.totalTrades ?? '0'),
+      totalTurnover: r?.totalTurnover ?? '0',
+      totalQuantity: r?.totalQuantity ?? '0',
+      distinctSymbols: Number(r?.distinctSymbols ?? '0'),
+      lastExecutedAt: r?.lastExecutedAt ?? null,
+    };
+  }
 }

@@ -2,7 +2,10 @@ import { GENESIS_HASH, computeHash } from '@lp/utils/hash-chain';
 import { ulid } from '@lp/utils/id';
 import { Money } from '@lp/utils/money';
 
+import { computeChargesForFill, type ChargeLine } from './charges-calc.js';
+
 import type { AppLogger } from '../logger.js';
+import type { ProductSegment } from '@lp/constants';
 import type { Redis } from 'ioredis';
 import type pg from 'pg';
 
@@ -23,6 +26,13 @@ export interface OrderJobData {
 }
 
 const REFERENCE_PRICE_FALLBACK = '100';
+
+/**
+ * Default segment for orders that don't carry one. The order intake schema
+ * doesn't yet have a `segment` field (TODO when DIOS / brokers start sending
+ * derivatives); equity-delivery is the safest default for a cash-equity LP.
+ */
+const DEFAULT_SEGMENT: ProductSegment = 'EQ_DELIVERY';
 
 export class OrderProcessor {
   constructor(
@@ -51,9 +61,9 @@ export class OrderProcessor {
     // Validate the price parses cleanly (Money throws on garbage).
     void new Money(fillPrice);
 
-    await this.recordFill(order, fillPrice);
+    const { tradeId, charges } = await this.recordFill(order, fillPrice);
     await this.markFilled(order.order_id);
-    await this.publishTradeEvent(order, fillPrice);
+    await this.publishTradeEvent(order, tradeId, fillPrice, charges);
   }
 
   private async loadOrder(orderId: string): Promise<OrderRow | null> {
@@ -68,9 +78,21 @@ export class OrderProcessor {
     return rows[0] ?? null;
   }
 
-  private async recordFill(order: OrderRow, fillPrice: string): Promise<void> {
+  private async recordFill(
+    order: OrderRow,
+    fillPrice: string,
+  ): Promise<{ tradeId: string; charges: ChargeLine[] }> {
     const tradeId = ulid();
     const executedAt = new Date();
+
+    const charges = computeChargesForFill({
+      tradeId,
+      side: order.side,
+      quantity: new Money(order.quantity).toString(),
+      price: new Money(fillPrice).toString(),
+      executedAt,
+      segment: DEFAULT_SEGMENT,
+    });
 
     const client = await this.pool.connect();
     try {
@@ -111,11 +133,28 @@ export class OrderProcessor {
           hash,
         ],
       );
+
+      // Charges in the same transaction so a failure rolls back the whole fill.
+      // If a trade row exists, its charge rows MUST also exist.
+      for (const c of charges) {
+        await client.query(
+          `INSERT INTO trading.charges (trade_id, type, amount, description)
+           VALUES ($1, $2::charge_type, $3, $4)`,
+          [c.tradeId, c.type, c.amount, c.description],
+        );
+      }
+
       await client.query('COMMIT');
       this.logger.info(
-        { tradeId, orderId: order.order_id, brokerId: order.broker_id },
-        'order-processor: trade recorded',
+        {
+          tradeId,
+          orderId: order.order_id,
+          brokerId: order.broker_id,
+          chargeCount: charges.length,
+        },
+        'order-processor: trade + charges recorded',
       );
+      return { tradeId, charges };
     } catch (err) {
       await client.query('ROLLBACK');
       throw err;
@@ -131,16 +170,28 @@ export class OrderProcessor {
     );
   }
 
-  private async publishTradeEvent(order: OrderRow, fillPrice: string): Promise<void> {
+  private async publishTradeEvent(
+    order: OrderRow,
+    tradeId: string,
+    fillPrice: string,
+    charges: ChargeLine[],
+  ): Promise<void> {
+    const chargesTotal = charges
+      .reduce<Money>((acc, c) => acc.add(c.amount), Money.zero())
+      .round(2)
+      .toString();
     await this.redis.publish(
       'lp.events',
       JSON.stringify({
         type: 'trade.executed',
         brokerId: order.broker_id,
+        tradeId,
+        orderId: order.order_id,
         symbol: order.symbol,
         side: order.side,
         price: fillPrice,
         quantity: order.quantity,
+        chargesTotal,
         executedAt: new Date().toISOString(),
       }),
     );

@@ -1,6 +1,8 @@
 import { BullModule } from '@nestjs/bullmq';
 import { Module, type DynamicModule } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ThrottlerGuard, ThrottlerModule, seconds } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 
 import { AppConfigModule, AppConfigService } from './config/config.module.js';
@@ -76,6 +78,17 @@ export class AppModule {
       DatabaseModule,
       RedisModule,
       EventEmitterModule.forRoot(),
+      // PHASE 1 M5: global rate limiting. Per-endpoint overrides via
+      // @Throttle({ short: { ttl, limit } }) on login routes (5/min) etc.
+      // In-memory store is single-instance only — if you horizontally scale
+      // the api, swap to a Redis-backed ThrottlerStorage adapter.
+      ThrottlerModule.forRoot({
+        throttlers: [
+          { name: 'short', ttl: seconds(60), limit: 100 }, // burst protection
+          { name: 'medium', ttl: seconds(600), limit: 1000 }, // per-IP cadence
+          { name: 'long', ttl: seconds(3_600), limit: 5000 }, // per-hour ceiling
+        ],
+      }),
       BullModule.forRootAsync({
         imports: [AppConfigModule],
         inject: [AppConfigService],
@@ -106,6 +119,17 @@ export class AppModule {
       imports.push(...adminImports);
     }
 
-    return { module: AppModule, imports };
+    return {
+      module: AppModule,
+      imports,
+      providers: [
+        // Global rate-limit guard. Per-controller @SkipThrottle() or
+        // @Throttle({ <name>: { ttl, limit } }) tweaks the policy on each
+        // route. The HMAC-signed broker order path bypasses this guard via
+        // @SkipThrottle() — those clients are authenticated, server-to-server,
+        // and need throughput; brute-force isn't the threat there.
+        { provide: APP_GUARD, useClass: ThrottlerGuard },
+      ],
+    };
   }
 }

@@ -1,13 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  HttpStatus,
-  Param,
-  Post,
-  UseGuards,
-  UsePipes,
-} from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Param, Post, UseGuards } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import * as argon2 from 'argon2';
@@ -18,6 +9,7 @@ import { ErrorCode } from '@lp/constants';
 import { ulid } from '@lp/utils/id';
 
 import { DomainException } from '../../../common/exceptions/domain.exception.js';
+import { strongPasswordSchema } from '../../../common/passwords/strong-password.schema.js';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
 import { DRIZZLE_DB, type Db } from '../../../database/connection.js';
 import { users } from '../../auth/schema/user.schema.js';
@@ -28,11 +20,12 @@ import { AdminRoleGuard } from '../common/admin-role.guard.js';
 import { ReauthGuard } from '../common/reauth.guard.js';
 import { TotpVerifiedGuard } from '../common/totp-verified.guard.js';
 
+
 const createAdminSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
   displayName: z.string().min(1).max(80),
   adminRole: z.enum(['super_admin', 'ops', 'support', 'read_only']),
-  temporaryPassword: z.string().min(12).max(256),
+  temporaryPassword: strongPasswordSchema,
 });
 
 @ApiTags('admin/users')
@@ -61,9 +54,8 @@ export class AdminUsersController {
   @Post()
   @RequireReauth()
   @AuditLog({ action: 'admin_user.create', resourceType: 'admin_user' })
-  @UsePipes(new ZodValidationPipe(createAdminSchema))
   async create(
-    @Body() body: z.infer<typeof createAdminSchema>,
+    @Body(new ZodValidationPipe(createAdminSchema)) body: z.infer<typeof createAdminSchema>,
     @AdminCtx() ctx: AdminRequestContext,
   ) {
     const tx = requireTx(ctx);

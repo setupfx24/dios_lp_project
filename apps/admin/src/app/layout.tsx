@@ -13,7 +13,14 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
+      {/*
+       * suppressHydrationWarning on <body> too — browser extensions
+       * (ColorZilla, Grammarly, Lazarus, etc.) mutate the body element
+       * before React hydrates, causing harmless mismatch warnings.
+       * The flag only suppresses warnings for THIS element's attributes,
+       * not for any descendant or for actual content mismatches.
+       */}
+      <body suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>
     </html>

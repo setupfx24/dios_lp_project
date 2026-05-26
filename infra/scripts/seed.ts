@@ -22,12 +22,33 @@ if (!databaseUrl) {
 
 const BROKER_ID = 'demo-broker-1';
 const API_KEY_PREFIX = 'lp_demo';
-const API_KEY_SECRET = 'demo_secret_for_local_only';
-const DEMO_EMAIL = 'demo@broker.local';
-const DEMO_PASSWORD = 'demo_password_change_me';
+/**
+ * Demo broker credentials are intentionally for *local development only*. We
+ * keep the literals here (rather than env-required) because seeding the demo
+ * dataset is itself a dev-only operation — it's gated by the dev compose stack
+ * and the lp_owner DB role, which prod must not expose. If you want to use
+ * this script to bootstrap a real environment, override via the env vars
+ * below; otherwise these defaults are fine.
+ */
+const API_KEY_SECRET = process.env.DEMO_API_KEY_SECRET ?? 'demo_secret_for_local_only';
+const DEMO_EMAIL = process.env.DEMO_BROKER_EMAIL ?? 'demo@broker.local';
+const DEMO_PASSWORD = process.env.DEMO_BROKER_PASSWORD ?? 'demo_password_change_me';
 
-const SUPER_ADMIN_EMAIL = 'admin@lp.local';
-const SUPER_ADMIN_PASSWORD = 'CHANGE_ME_super_admin_password_minimum_12';
+const SUPER_ADMIN_EMAIL = process.env.ADMIN_SEED_EMAIL ?? 'admin@lp.local';
+/**
+ * Super-admin password is REQUIRED from the environment. We refuse to seed
+ * with a hard-coded value because the only way that defaults can be hard-coded
+ * is if it's a placeholder — and a placeholder in production is equivalent to
+ * having no admin auth at all. Operator must supply ADMIN_SEED_PASSWORD with a
+ * value of ≥12 characters at seed time, then change it on first login.
+ */
+const SUPER_ADMIN_PASSWORD = process.env.ADMIN_SEED_PASSWORD;
+if (!SUPER_ADMIN_PASSWORD || SUPER_ADMIN_PASSWORD.length < 12) {
+  throw new Error(
+    'ADMIN_SEED_PASSWORD env var is required (≥12 chars). ' +
+      "Generate one with: node -e \"console.log(require('crypto').randomBytes(18).toString('base64url'))\"",
+  );
+}
 
 const pool = new pg.Pool({ connectionString: databaseUrl, max: 4 });
 
@@ -71,28 +92,24 @@ async function main(): Promise<void> {
       [ulid(), SUPER_ADMIN_EMAIL, adminPasswordHash, 'Super Admin'],
     );
 
-    // Order (the trades reference it via FK)
-    const orderId = ulid();
-    await client.query(
-      `INSERT INTO trading.orders
-       (order_id, client_order_id, broker_id, symbol, side, type, quantity, price, time_in_force, status)
-       VALUES ($1, $2, $3, 'RELIANCE', 'BUY', 'LIMIT', '100', '2500', 'DAY', 'FILLED')
-       ON CONFLICT DO NOTHING`,
-      [orderId, 'demo-c1', BROKER_ID],
-    );
-
-    // 100 chained trades — only seed if none exist for this broker
-    const existing = await client.query<{ count: string }>(
-      `SELECT count(*)::text AS count FROM trading.trades WHERE broker_id = $1`,
-      [BROKER_ID],
-    );
-    if ((existing.rows[0]?.count ?? '0') === '0') {
+    // Trades / charges / orders are NOT seeded. The dashboard reflects whatever
+    // the broker has actually pushed via POST /api/v1/broker/orders. An empty
+    // table renders as zero KPIs in the UI — that is the intended state for a
+    // fresh install or a not-yet-wired broker.
+    //
+    // To restore the old demo dataset, replace this comment with the original
+    // order + 100-trade + charges block (still available in git history).
+    if (false) {
+      const orderId = ulid();
       let prevHash = GENESIS_HASH;
       for (let i = 0; i < 100; i++) {
         const tradeId = ulid();
         const executedAt = new Date(Date.UTC(2026, 0, 1, 9, 15, 0) + i * 60_000);
         const quantity = '1';
-        const price = new Money(2500 + i * 0.05).round(2).toString();
+        const price = new Money('2500')
+          .add(new Money('0.05').mul(String(i)))
+          .round(2)
+          .toString();
         const canonical = {
           tradeId,
           orderId,
@@ -123,6 +140,30 @@ async function main(): Promise<void> {
           ],
         );
         prevHash = hash;
+
+        // Seed per-trade Indian-equity charges (illustrative rates, not authoritative).
+        const turnover = new Money(quantity).mul(price);
+        const brokerage = turnover.mul('0.0003').round(4); // 0.03 %
+        const stt = turnover.mul('0.001').round(4); // 0.1 % on BUY (delivery)
+        const exch = turnover.mul('0.0000325').round(4); // NSE 0.00325 %
+        const sebi = turnover.mul('0.000001').round(4); // 0.0001 %
+        const stamp = turnover.mul('0.00015').round(4); // 0.015 %
+        const gst = brokerage.add(exch).add(sebi).mul('0.18').round(4); // 18 % on (brokerage + exch + sebi)
+        const chargeRows: [string, string, string][] = [
+          ['BROKERAGE', brokerage.toString(), 'Flat 0.03% brokerage'],
+          ['STT', stt.toString(), 'Securities Transaction Tax (delivery)'],
+          ['EXCHANGE_FEE', exch.toString(), 'NSE turnover charge'],
+          ['SEBI_FEE', sebi.toString(), 'SEBI turnover fee'],
+          ['STAMP_DUTY', stamp.toString(), 'Stamp duty (state)'],
+          ['GST', gst.toString(), 'GST @ 18% on (brokerage + exch + sebi)'],
+        ];
+        for (const [type, amount, desc] of chargeRows) {
+          await client.query(
+            `INSERT INTO trading.charges (trade_id, type, amount, description)
+             VALUES ($1, $2::charge_type, $3, $4)`,
+            [tradeId, type, amount, desc],
+          );
+        }
       }
     }
 

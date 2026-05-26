@@ -32,7 +32,7 @@
     "lint-staged": "15.2.10",
     "prettier": "3.3.3",
     "rimraf": "6.0.1",
-    "turbo": "2.1.3",
+    "turbo": "2.9.14",
     "typescript": "5.6.2"
   },
   "pnpm": {
@@ -54,6 +54,22 @@
       "ssh2",
       "unrs-resolver",
       "sharp"
-    ]
+    ],
+    "//overrides-rationale": "Force-resolve transitive deps with published security advisories to their patched versions. Each entry corresponds to a single CVE / GHSA — review pnpm audit before deleting any of them. Run `pnpm audit` after touching this list to confirm the advisory is gone.",
+    "overrides": {
+      "undici": "^6.24.0",
+      "lodash": "^4.17.23",
+      "js-yaml": "^4.1.1",
+      "cookie": "^0.7.2",
+      "tar-fs": "^2.1.4",
+      "yaml": "^2.8.3",
+      "postcss": "^8.5.10",
+      "fast-uri": "^3.1.2",
+      "uuid": "^11.1.1",
+      "@eslint/plugin-kit": "^0.3.4",
+      "@fastify/middie": "^8.3.3",
+      "esbuild": "^0.25.0",
+      "glob": "^10.5.0"
+    }
   }
 }

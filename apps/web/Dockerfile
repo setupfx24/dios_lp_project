@@ -20,6 +20,15 @@ RUN corepack enable
 WORKDIR /repo
 COPY --from=deps /repo/node_modules ./node_modules
 COPY . .
+# NEXT_PUBLIC_* are baked into the client bundle at build time, so they must
+# be passed as build args (compose `build.args`) — not just runtime env. The
+# defaults make the dev compose stack work without explicit args.
+ARG NEXT_PUBLIC_API_URL=http://localhost:3000
+ARG NEXT_PUBLIC_WS_URL=http://localhost:3000
+ARG NEXT_PUBLIC_ENV=DEV
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
+    NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL \
+    NEXT_PUBLIC_ENV=$NEXT_PUBLIC_ENV
 RUN pnpm --filter @lp/types --filter @lp/constants --filter @lp/utils \
         --filter @lp/validators --filter @lp/sdk build && \
     NEXT_OUTPUT=standalone pnpm --filter @lp/web build

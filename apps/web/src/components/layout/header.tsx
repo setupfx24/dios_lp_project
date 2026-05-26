@@ -13,9 +13,10 @@ export function Header({ brokerName }: { brokerName: string }) {
     router.push('/login');
   }
   return (
-    <header className="flex h-14 items-center justify-between border-b bg-card px-6">
-      <div className="text-sm text-muted-foreground">
-        Signed in as <span className="font-medium text-foreground">{brokerName}</span>
+    <header className="flex h-14 shrink-0 items-center justify-between border-b bg-card px-4 sm:px-6">
+      <div className="min-w-0 truncate text-sm text-muted-foreground">
+        <span className="hidden sm:inline">Signed in as </span>
+        <span className="font-medium text-foreground">{brokerName}</span>
       </div>
       <Button
         size="sm"
@@ -23,7 +24,8 @@ export function Header({ brokerName }: { brokerName: string }) {
         // eslint-disable-next-line @typescript-eslint/no-misused-promises
         onClick={logout}
       >
-        <LogOut className="mr-2 h-4 w-4" /> Logout
+        <LogOut className="h-4 w-4 sm:mr-2" />
+        <span className="hidden sm:inline">Logout</span>
       </Button>
     </header>
   );

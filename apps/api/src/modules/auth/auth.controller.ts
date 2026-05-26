@@ -1,5 +1,6 @@
-import { Body, Controller, Post, Res, UsePipes } from '@nestjs/common';
+import { Body, Controller, Post, Res } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { Throttle, seconds } from '@nestjs/throttler';
 
 import { loginSchema, type LoginDto } from '@lp/validators';
 
@@ -21,9 +22,12 @@ export class AuthController {
   ) {}
 
   @Post('login')
-  @UsePipes(new ZodValidationPipe(loginSchema))
+  // M5: brute-force / credential-stuffing brake. 5 attempts per IP per
+  // minute. Argon2 is slow (~300ms) but doesn't stop a determined attacker;
+  // this guard does. Legitimate users hit this <1× per session.
+  @Throttle({ short: { ttl: seconds(60), limit: 5 } })
   async login(
-    @Body() dto: LoginDto,
+    @Body(new ZodValidationPipe(loginSchema)) dto: LoginDto,
     @Res({ passthrough: true }) reply: FastifyReply,
   ): Promise<{ userId: string }> {
     const { userId, accessToken } = await this.auth.login(dto);

@@ -11,10 +11,23 @@ export function middleware(req: NextRequest) {
   res.headers.set('X-Frame-Options', 'DENY');
   res.headers.set('X-Content-Type-Options', 'nosniff');
   res.headers.set('Referrer-Policy', 'no-referrer');
+
+  // In dev, Next.js HMR / React Refresh requires inline scripts + eval. The
+  // tight prod CSP would break the dashboard the moment a hot reload fires,
+  // so relax script-src in development only. Other directives stay strict.
+  const isDev = process.env.NODE_ENV !== 'production';
+  const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? '*';
+  const wsOrigin = isDev ? ' ws://localhost:* http://localhost:*' : '';
+  const scriptSrc = isDev ? "script-src 'self' 'unsafe-eval' 'unsafe-inline'; " : '';
   res.headers.set(
     'Content-Security-Policy',
-    "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; connect-src 'self' " +
-      (process.env.NEXT_PUBLIC_API_URL ?? '*') +
+    "default-src 'self'; " +
+      scriptSrc +
+      "img-src 'self' data:; " +
+      "style-src 'self' 'unsafe-inline'; " +
+      "connect-src 'self' " +
+      apiOrigin +
+      wsOrigin +
       "; frame-ancestors 'none'",
   );
 

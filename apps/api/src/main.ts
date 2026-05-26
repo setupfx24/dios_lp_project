@@ -1,5 +1,10 @@
 import 'reflect-metadata';
 
+// Make BigInt JSON-serializable (Drizzle returns bigint columns as native BigInt).
+(BigInt.prototype as unknown as { toJSON: () => string }).toJSON = function (this: bigint): string {
+  return this.toString();
+};
+
 import { writeFile, mkdir } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -23,6 +28,14 @@ async function bootstrap(): Promise<void> {
     logger: false, // we use nestjs-pino
     genReqId: () => crypto.randomUUID(),
     bodyLimit: 1_048_576, // 1 MB
+    // Behind Cloudflare + Nginx in prod. Without trustProxy=true Fastify reports
+    // every request as coming from 127.0.0.1 (the reverse proxy's loopback),
+    // which breaks the throttler (one bucket for the entire internet) and the
+    // audit log's ip_address column. The reverse proxy is REQUIRED to strip
+    // hostile X-Forwarded-* headers before passing the request along — Nginx's
+    // `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for` + Cloudflare
+    // dropping any incoming X-Forwarded-* from clients does this for us.
+    trustProxy: true,
   });
 
   // Capture raw body for HMAC verification.
@@ -43,7 +56,7 @@ async function bootstrap(): Promise<void> {
   const cfg = app.get(AppConfigService);
 
   await app.register(fastifyHelmet, { contentSecurityPolicy: false });
-  await app.register(fastifyCookie, { secret: cfg.get('JWT_SECRET') });
+  await app.register(fastifyCookie, { secret: cfg.get('COOKIE_SECRET') });
 
   app.enableCors({
     origin: cfg.get('CORS_ORIGINS'),

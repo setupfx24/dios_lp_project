@@ -1,4 +1,4 @@
-import { Body, Controller, HttpStatus, Post, UseGuards, UsePipes } from '@nestjs/common';
+import { Body, Controller, HttpStatus, Post, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
 
@@ -50,9 +50,8 @@ export class InterventionsController {
   @Post('wallet-adjust')
   @RequireReauth()
   @AuditLog({ action: 'wallet.adjust', resourceType: 'wallet' })
-  @UsePipes(new ZodValidationPipe(walletAdjustSchema))
   async walletAdjust(
-    @Body() body: z.infer<typeof walletAdjustSchema>,
+    @Body(new ZodValidationPipe(walletAdjustSchema)) body: z.infer<typeof walletAdjustSchema>,
     @AdminCtx() ctx: AdminRequestContext,
   ): Promise<
     { status: 'executed'; entryIds: string[] } | { status: 'queued_for_approval'; actionId: string }

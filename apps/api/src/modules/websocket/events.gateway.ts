@@ -5,18 +5,64 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
+import * as argon2 from 'argon2';
 import { Redis } from 'ioredis';
 
+import { verify as verifyHmac } from '@lp/utils';
+
+import { parseCorsOrigins } from '../../config/env.schema.js';
 import { REDIS_SUBSCRIBER } from '../../infrastructure/redis.module.js';
 import { AuthService, type JwtPayload } from '../auth/auth.service.js';
+import { BrokersRepository } from '../brokers/brokers.repository.js';
 
 import type { DomainEvent } from '@lp/types';
 import type { Server, Socket } from 'socket.io';
 
 const REDIS_CHANNEL = 'lp.events';
 
+// Module-load-time origin list: `@WebSocketGateway` decorator is evaluated
+// before DI is wired, so we cannot call ConfigService here. Node has already
+// applied `--env-file=.env` by the time this file is imported, so reading
+// process.env mirrors what envSchema validated at bootstrap.
+const ALLOWED_WS_ORIGINS = parseCorsOrigins(process.env.CORS_ORIGINS);
+
+function wsCorsOrigin(
+  origin: string | undefined,
+  callback: (err: Error | null, allow?: boolean) => void,
+): void {
+  // Non-browser clients (e.g. DIOS service-to-service) send no Origin header;
+  // their auth is HMAC-gated below. CORS only protects browser callers.
+  if (!origin) {
+    callback(null, true);
+    return;
+  }
+  if (ALLOWED_WS_ORIGINS.includes(origin)) {
+    callback(null, true);
+    return;
+  }
+  callback(new Error(`WS CORS denied: ${origin}`), false);
+}
+
+/**
+ * Trade event stream.
+ *
+ * Auth path 1 — JWT (interactive dashboard sockets):
+ *   socket.handshake.auth.token = '<jwt>'  OR  cookie 'lp_access=<jwt>'
+ *
+ * Auth path 2 — HMAC (service-to-service, e.g. DIOS):
+ *   socket.handshake.headers['x-api-key']   = 'prefix.secret'
+ *   socket.handshake.headers['x-timestamp'] = '<epoch-ms>'
+ *   socket.handshake.headers['x-signature'] = hex(HMAC-SHA256(
+ *     secret,
+ *     `${timestamp}\nWS /ws\n`
+ *   ))
+ *
+ * HMAC payload is `${ts}\nWS /ws\n` (empty body line) — same separator
+ * convention as the REST HmacGuard so a broker only needs one signing
+ * primitive in their codebase.
+ */
 @WebSocketGateway({
-  cors: { origin: true, credentials: true },
+  cors: { origin: wsCorsOrigin, credentials: true },
   path: '/ws',
 })
 export class EventsGateway
@@ -29,6 +75,7 @@ export class EventsGateway
 
   constructor(
     private readonly auth: AuthService,
+    private readonly brokers: BrokersRepository,
     @Inject(REDIS_SUBSCRIBER) private readonly subscriber: Redis,
   ) {}
 
@@ -53,8 +100,17 @@ export class EventsGateway
   }
 
   async handleConnection(socket: Socket): Promise<void> {
+    // Try HMAC headers first (service-to-service). Fall back to JWT (dashboard).
+    const hmacBroker = await this.tryHmacAuth(socket);
+    if (hmacBroker) {
+      await socket.join(`broker:${hmacBroker}`);
+      this.logger.log(`WS connect (HMAC) broker=${hmacBroker} sid=${socket.id}`);
+      return;
+    }
+
     const token = this.extractToken(socket);
     if (!token) {
+      this.logger.warn(`WS rejected: no credentials (sid=${socket.id})`);
       socket.disconnect(true);
       return;
     }
@@ -62,6 +118,7 @@ export class EventsGateway
     try {
       payload = await this.auth.verify(token);
     } catch {
+      this.logger.warn(`WS rejected: bad JWT (sid=${socket.id})`);
       socket.disconnect(true);
       return;
     }
@@ -77,10 +134,78 @@ export class EventsGateway
         }
       });
     }
+    this.logger.log(
+      `WS connect (JWT) user=${payload.sub} role=${payload.role} broker=${payload.brokerId ?? '-'}`,
+    );
   }
 
   handleDisconnect(socket: Socket): void {
     this.logger.debug(`Socket disconnected: ${socket.id}`);
+  }
+
+  /**
+   * Returns the broker_id on successful HMAC auth, or null if HMAC headers
+   * weren't supplied. Throws nothing; auth failures are logged and surfaced
+   * as `null` so the JWT path can be tried next (only the absence of headers
+   * means "not HMAC"; a *present but invalid* HMAC closes the socket).
+   */
+  private async tryHmacAuth(socket: Socket): Promise<string | null> {
+    const headers = socket.handshake.headers;
+    const apiKey = headers['x-api-key'];
+    const timestamp = headers['x-timestamp'];
+    const signature = headers['x-signature'];
+    if (
+      typeof apiKey !== 'string' ||
+      typeof timestamp !== 'string' ||
+      typeof signature !== 'string'
+    ) {
+      return null;
+    }
+
+    const [prefix, secret] = apiKey.split('.');
+    if (!prefix || !secret) {
+      this.logger.warn(`WS HMAC rejected: malformed api key (sid=${socket.id})`);
+      socket.disconnect(true);
+      return null;
+    }
+
+    const found = await this.brokers.findByApiKeyPrefix(prefix);
+    if (!found) {
+      this.logger.warn(`WS HMAC rejected: unknown prefix ${prefix} (sid=${socket.id})`);
+      socket.disconnect(true);
+      return null;
+    }
+    const { broker, key } = found;
+
+    if (broker.status !== 'active') {
+      this.logger.warn(`WS HMAC rejected: broker ${broker.brokerId} not active`);
+      socket.disconnect(true);
+      return null;
+    }
+
+    const secretValid = await argon2.verify(key.secretHash, secret);
+    if (!secretValid) {
+      this.logger.warn(`WS HMAC rejected: bad secret for ${prefix} (sid=${socket.id})`);
+      socket.disconnect(true);
+      return null;
+    }
+
+    const result = verifyHmac(
+      secret,
+      {
+        timestamp,
+        body: '',
+        requestLine: 'WS /ws',
+      },
+      signature,
+    );
+    if (!result.valid) {
+      this.logger.warn(`WS HMAC rejected: ${result.reason} for ${prefix} (sid=${socket.id})`);
+      socket.disconnect(true);
+      return null;
+    }
+
+    return broker.brokerId;
   }
 
   private extractToken(socket: Socket): string | null {

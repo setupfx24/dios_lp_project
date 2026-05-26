@@ -25,8 +25,8 @@ export function PnlChart({ data }: Props) {
     const chart = createChart(containerRef.current, {
       autoSize: true,
       layout: {
-        background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: 'currentColor',
+        background: { type: ColorType.Solid, color: 'rgba(0,0,0,0)' },
+        textColor: '#94a3b8',
       },
       grid: {
         vertLines: { color: 'rgba(127,127,127,0.1)' },

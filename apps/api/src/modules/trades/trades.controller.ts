@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, UseGuards, UsePipes } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { HttpStatus } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
@@ -34,11 +34,40 @@ export class TradesController {
     private readonly charges: ChargesRepository,
   ) {}
 
+  @Get('stats')
+  async stats(
+    @CurrentUser() user: CurrentUserPayload | null,
+    @Query('brokerId') requestedBrokerId?: string,
+  ): Promise<{
+    totalTrades: number;
+    totalTurnover: string;
+    totalQuantity: string;
+    distinctSymbols: number;
+    lastExecutedAt: string | null;
+    chargesTotal: string;
+    chargesCount: number;
+    chargesByType: { type: string; amount: string; count: number }[];
+  }> {
+    if (!user) {
+      throw new DomainException(ErrorCode.AUTH_FORBIDDEN, 'No user', HttpStatus.FORBIDDEN);
+    }
+    const brokerId = this.brokerScope(user, requestedBrokerId);
+    const [tradeStats, chargeStats] = await Promise.all([
+      this.trades.statsForBroker(brokerId),
+      this.charges.statsForBroker(brokerId),
+    ]);
+    return {
+      ...tradeStats,
+      chargesTotal: chargeStats.totalAmount,
+      chargesCount: chargeStats.count,
+      chargesByType: chargeStats.byType,
+    };
+  }
+
   @Get()
-  @UsePipes(new ZodValidationPipe(tradeListQuerySchema))
   async list(
     @CurrentUser() user: CurrentUserPayload | null,
-    @Query() query: TradeListQuery,
+    @Query(new ZodValidationPipe(tradeListQuerySchema)) query: TradeListQuery,
   ): Promise<{ items: TradeRow[]; nextCursor: string | null }> {
     if (!user) {
       throw new DomainException(ErrorCode.AUTH_FORBIDDEN, 'No user', HttpStatus.FORBIDDEN);

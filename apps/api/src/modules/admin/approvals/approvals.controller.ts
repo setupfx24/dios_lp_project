@@ -1,13 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  HttpStatus,
-  Param,
-  Post,
-  UseGuards,
-  UsePipes,
-} from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
 
@@ -61,10 +52,9 @@ export class ApprovalsController {
     resourceType: 'pending_action',
     resourceIdParam: 'actionId',
   })
-  @UsePipes(new ZodValidationPipe(decisionSchema))
   async approve(
     @Param('actionId') actionId: string,
-    @Body() body: z.infer<typeof decisionSchema>,
+    @Body(new ZodValidationPipe(decisionSchema)) body: z.infer<typeof decisionSchema>,
     @AdminCtx() ctx: AdminRequestContext,
   ) {
     const tx = requireTx(ctx);
@@ -109,10 +99,9 @@ export class ApprovalsController {
     resourceType: 'pending_action',
     resourceIdParam: 'actionId',
   })
-  @UsePipes(new ZodValidationPipe(decisionSchema))
   async reject(
     @Param('actionId') actionId: string,
-    @Body() body: z.infer<typeof decisionSchema>,
+    @Body(new ZodValidationPipe(decisionSchema)) body: z.infer<typeof decisionSchema>,
     @AdminCtx() ctx: AdminRequestContext,
   ) {
     if (!body.reason) {

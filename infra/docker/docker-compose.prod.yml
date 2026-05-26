@@ -1,22 +1,42 @@
-# Overrides for production-like local runs. Use:
-#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up
+# =============================================================================
+# Production overrides on top of docker-compose.yml. Use with:
 #
-# Production deployments should use IaC (Terraform / Pulumi / Helm) — this file
-# is for previewing the prod posture locally (no admin tools, no source mounts).
+#   docker compose -f infra/docker/docker-compose.yml \
+#                  -f infra/docker/docker-compose.prod.yml up -d
+#
+# This file is what runs on the swistrade.com VPS. Compared to the base file:
+#   - pgadmin + redis-commander are profile-gated off
+#   - Postgres / Redis / app ports are bound to 127.0.0.1 only — only the
+#     local Nginx reverse proxy can reach them, never the public internet
+#   - NODE_ENV=production turns on the M2 placeholder-secret check, the H6
+#     fail-closed CORS check, and the H7 cookie-secret separation check
+#   - Swagger /docs is disabled (don't expose endpoint shapes publicly)
+#   - LOG_LEVEL=warn cuts the volume of pino structured logs
+# =============================================================================
 
 name: lp-platform
 
 services:
   pgadmin:
-    profiles: ['__never'] # disabled in prod-like
+    profiles: ['__never']
   redis-commander:
     profiles: ['__never']
+
+  postgres:
+    # Loopback-only: Nginx is on the same host. External Postgres access
+    # should be via SSH tunnel, never via the public IP.
+    ports: ['127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432']
+
+  redis:
+    ports: ['127.0.0.1:${REDIS_HOST_PORT:-6379}:6379']
 
   api:
     environment:
       NODE_ENV: production
       LOG_LEVEL: warn
       SWAGGER_ENABLED: 'false'
+    # 127.0.0.1 only — only Nginx on the same VPS can reach :3000.
+    ports: ['127.0.0.1:3000:3000']
 
   workers:
     environment:
@@ -26,7 +46,9 @@ services:
   web:
     environment:
       NODE_ENV: production
+    ports: ['127.0.0.1:3001:3001']
 
   admin:
     environment:
       NODE_ENV: production
+    ports: ['127.0.0.1:3002:3002']

@@ -29,6 +29,35 @@ export class SdkError extends Error {
     super(message);
     this.name = 'SdkError';
   }
+
+  /**
+   * True for the specific failure mode where the admin endpoint is reachable
+   * and the JWT is valid, but the action requires a fresh password reauth
+   * (e.g. issuing an API key, revoking a key, suspending a broker).
+   *
+   * The backend returns HTTP 403 with one of:
+   *   - "Reauth token required for this action"
+   *   - "Reauth token expired or absent"
+   *   - "Reauth token invalid"
+   * via ReauthGuard. UI consumers should catch this, prompt the user for
+   * their password, call `AdminClient.reauth()` to mint a token, then retry
+   * the original request with `.withReauth(token)`.
+   */
+  static isReauthRequired(err: unknown): err is SdkError {
+    return err instanceof SdkError && err.status === 403 && /reauth/i.test(err.message);
+  }
+
+  /**
+   * True when the session JWT / cookie has expired or is unrecognized.
+   * UI should clear local state and redirect to the login page.
+   */
+  static isTokenExpired(err: unknown): err is SdkError {
+    return (
+      err instanceof SdkError &&
+      err.status === 401 &&
+      (err.code === 'AUTH_TOKEN_EXPIRED' || err.code === 'AUTH_TOKEN_INVALID')
+    );
+  }
 }
 
 function apiSuccessSchema<T>(inner: ZodSchema<T>) {
@@ -72,8 +101,13 @@ export class LpClient {
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
 
     const headers = new Headers(init.headers);
-    headers.set('content-type', 'application/json');
     headers.set('accept', 'application/json');
+    // Same Fastify constraint as in AdminClient.request: only declare a JSON
+    // body when we send one. No-body POSTs (e.g. /broker/auth/logout) would
+    // otherwise hit "Body cannot be empty when content-type is application/json".
+    if (init.body != null) {
+      headers.set('content-type', 'application/json');
+    }
     if (this.token) {
       headers.set('authorization', `Bearer ${this.token}`);
     }
@@ -154,6 +188,34 @@ export class LpClient {
       `/api/v1/broker/trades/${encodeURIComponent(tradeId)}`,
       { method: 'GET' },
       tradeRecordSchema,
+    );
+  }
+
+  tradeStats(): Promise<{
+    totalTrades: number;
+    totalTurnover: string;
+    totalQuantity: string;
+    distinctSymbols: number;
+    lastExecutedAt: string | null;
+    chargesTotal: string;
+    chargesCount: number;
+    chargesByType: { type: string; amount: string; count: number }[];
+  }> {
+    return this.request(
+      '/api/v1/broker/trades/stats',
+      { method: 'GET' },
+      z.object({
+        totalTrades: z.number(),
+        totalTurnover: z.string(),
+        totalQuantity: z.string(),
+        distinctSymbols: z.number(),
+        lastExecutedAt: z.string().nullable(),
+        chargesTotal: z.string(),
+        chargesCount: z.number(),
+        chargesByType: z.array(
+          z.object({ type: z.string(), amount: z.string(), count: z.number() }),
+        ),
+      }),
     );
   }
 }

@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, Query, UseGuards, UsePipes } from '@nestjs/common';
+import { Controller, Get, Inject, Query, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { and, desc, eq, gte, lt } from 'drizzle-orm';
 import { z } from 'zod';
@@ -29,8 +29,7 @@ export class AuditQueryController {
   constructor(@Inject(DRIZZLE_DB) private readonly db: Db) {}
 
   @Get('logs')
-  @UsePipes(new ZodValidationPipe(querySchema))
-  async list(@Query() q: z.infer<typeof querySchema>) {
+  async list(@Query(new ZodValidationPipe(querySchema)) q: z.infer<typeof querySchema>) {
     const conds = [];
     if (q.actorId) {
       conds.push(eq(auditLogs.actorId, q.actorId));

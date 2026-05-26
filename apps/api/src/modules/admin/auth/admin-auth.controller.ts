@@ -1,5 +1,6 @@
-import { Body, Controller, Post, Req, Res, UseGuards, UsePipes } from '@nestjs/common';
+import { Body, Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { Throttle, seconds } from '@nestjs/throttler';
 import { z } from 'zod';
 
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
@@ -42,9 +43,11 @@ export class AdminAuthController {
   ) {}
 
   @Post('login')
-  @UsePipes(new ZodValidationPipe(loginBodySchema))
+  // M5: admin login brake. Tighter than broker login because the blast radius
+  // of a compromised admin account is much higher.
+  @Throttle({ short: { ttl: seconds(60), limit: 5 } })
   async login(
-    @Body() body: z.infer<typeof loginBodySchema>,
+    @Body(new ZodValidationPipe(loginBodySchema)) body: z.infer<typeof loginBodySchema>,
     @Req() req: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ): Promise<{ status: 'totp_setup_required' | 'totp_required' | 'success' }> {
@@ -54,17 +57,30 @@ export class AdminAuthController {
       req.headers['user-agent'],
       req.ip,
     );
+    // Wipe any stale cookie issued under the old `/api/v1/admin` path scope.
+    // Browsers identify cookies by (name, domain, path) — without this clear,
+    // a user who logged in before this fix has TWO `lp_admin_access` cookies
+    // and the server may read the wrong (expired) one first.
+    void reply.clearCookie(ADMIN_COOKIE, { path: '/api/v1/admin' });
+
+    // path:'/' so the cookie is sent on requests to the admin Next.js app
+    // (e.g. /operations, /brokers) as well as the API. The previous
+    // '/api/v1/admin' scope meant the browser only sent it on API calls,
+    // so the admin app's middleware never saw the cookie and bounced the
+    // user back to /login after 2FA setup. HttpOnly + SameSite=strict still
+    // protect against XSS / CSRF.
     void reply.setCookie(ADMIN_COOKIE, result.accessToken, {
       httpOnly: true,
       secure: this.cfg.isProd,
       sameSite: 'strict',
-      path: '/api/v1/admin',
+      path: '/',
     });
     return { status: result.status };
   }
 
   @Post('logout')
   logout(@Res({ passthrough: true }) reply: FastifyReply): { ok: true } {
+    void reply.clearCookie(ADMIN_COOKIE, { path: '/' });
     void reply.clearCookie(ADMIN_COOKIE, { path: '/api/v1/admin' });
     return { ok: true };
   }
@@ -80,18 +96,22 @@ export class AdminAuthController {
   @Post('2fa/verify-setup')
   @UseGuards(AdminJwtGuard, TotpVerifiedGuard)
   @SkipTotpVerified()
-  @UsePipes(new ZodValidationPipe(totpCodeSchema))
-  finalizeTotpSetup(@AdminUser() user: UserRow, @Body() body: z.infer<typeof totpCodeSchema>) {
+  finalizeTotpSetup(
+    @AdminUser() user: UserRow,
+    @Body(new ZodValidationPipe(totpCodeSchema)) body: z.infer<typeof totpCodeSchema>,
+  ) {
     return this.auth.finalizeTotpSetup(user, body.code);
   }
 
   @Post('2fa/verify')
+  // M5: TOTP brute-force brake. 6 digits = 10^6 search space; without a
+  // brake an attacker who has the password could try every code in seconds.
+  @Throttle({ short: { ttl: seconds(60), limit: 5 } })
   @UseGuards(AdminJwtGuard, TotpVerifiedGuard)
   @SkipTotpVerified()
-  @UsePipes(new ZodValidationPipe(totpCodeSchema))
   async verifyTotp(
     @Req() req: FastifyRequest,
-    @Body() body: z.infer<typeof totpCodeSchema>,
+    @Body(new ZodValidationPipe(totpCodeSchema)) body: z.infer<typeof totpCodeSchema>,
   ): Promise<{ ok: true }> {
     const ctx = requireAdminCtx(req);
     await this.auth.verifyTotp(ctx.user, ctx.session.sessionId, body.code);
@@ -99,12 +119,13 @@ export class AdminAuthController {
   }
 
   @Post('recovery/use')
+  // M5: recovery codes are higher-entropy than TOTP but still finite.
+  @Throttle({ short: { ttl: seconds(60), limit: 5 } })
   @UseGuards(AdminJwtGuard, TotpVerifiedGuard)
   @SkipTotpVerified()
-  @UsePipes(new ZodValidationPipe(recoveryBodySchema))
   async useRecovery(
     @Req() req: FastifyRequest,
-    @Body() body: z.infer<typeof recoveryBodySchema>,
+    @Body(new ZodValidationPipe(recoveryBodySchema)) body: z.infer<typeof recoveryBodySchema>,
   ): Promise<{ ok: true }> {
     const ctx = requireAdminCtx(req);
     await this.auth.consumeRecoveryCode(ctx.user, ctx.session.sessionId, body.code);
@@ -112,11 +133,13 @@ export class AdminAuthController {
   }
 
   @Post('reauth')
+  // M5: reauth re-prompts for the user's password to unlock a sensitive
+  // window. Same brute-force vector as login, same brake.
+  @Throttle({ short: { ttl: seconds(60), limit: 5 } })
   @UseGuards(AdminJwtGuard, TotpVerifiedGuard)
-  @UsePipes(new ZodValidationPipe(reauthBodySchema))
   async reauth(
     @Req() req: FastifyRequest,
-    @Body() body: z.infer<typeof reauthBodySchema>,
+    @Body(new ZodValidationPipe(reauthBodySchema)) body: z.infer<typeof reauthBodySchema>,
   ): Promise<{ reauthToken: string; expiresInSeconds: number }> {
     const ctx = requireAdminCtx(req);
     const token = await this.auth.issueReauthToken(ctx.user, ctx.session.sessionId, body.password);
