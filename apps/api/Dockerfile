@@ -23,8 +23,14 @@ FROM node:20-alpine AS build
 RUN corepack enable
 WORKDIR /repo
 
-COPY --from=deps /repo/node_modules ./node_modules
-COPY --from=deps /repo/apps/api/node_modules ./apps/api/node_modules
+# Copy the entire installed tree from the deps stage — that includes the
+# per-workspace node_modules folders where pnpm puts symlinks like
+# `packages/types/node_modules/@lp/tsconfig` -> `packages/config/tsconfig`.
+# Without these, tsc in any workspace can't resolve `@lp/tsconfig/base.json`
+# and the build dies with TS6053.
+COPY --from=deps /repo .
+# Overlay the actual source (src/, tsconfig.json, etc.) — package.json files
+# get overwritten with identical copies from the source tree.
 COPY . .
 
 RUN pnpm --filter @lp/types --filter @lp/constants --filter @lp/utils \

@@ -17,7 +17,10 @@ RUN pnpm install --frozen-lockfile
 FROM node:20-alpine AS build
 RUN corepack enable
 WORKDIR /repo
-COPY --from=deps /repo/node_modules ./node_modules
+# Copy the entire installed tree from deps so per-workspace node_modules
+# (pnpm symlinks for @lp/tsconfig etc.) are in place; without them tsc
+# bails out with TS6053 on workspace tsconfig "extends".
+COPY --from=deps /repo .
 COPY . .
 # NEXT_PUBLIC_* are baked into the client bundle at build time, so they must
 # be passed as build args (compose `build.args`) — not just runtime env. The
