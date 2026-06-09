@@ -1,0 +1,23 @@
+# Local override: adds a one-off DB migrator/seed container.
+# Usage (from infra/docker/):
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml --profile tools run --rm migrator
+#
+# The migrator is built from the api "build" stage (it has src + tsx), and
+# connects as lp_owner (DDL rights) using the dev-default password.
+
+services:
+  migrator:
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+      target: build
+    profiles: ['tools']
+    environment:
+      DATABASE_URL: postgres://lp_owner:${LP_OWNER_PW:-owner_pw}@postgres:5432/lp
+      REDIS_URL: redis://redis:6379
+    command: ['pnpm', '--filter', '@lp/api', 'db:migrate']
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [lp-net]
