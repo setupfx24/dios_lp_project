@@ -93,13 +93,16 @@ export class AdminAuthService {
       issuedAt: new Date(),
       expiresAt,
       lastActivityAt: new Date(),
+      // 2FA disabled: mark the session TOTP-verified at login so the
+      // TotpVerifiedGuard passes with email + password alone.
+      totpVerifiedAt: new Date(),
       userAgent: ua ?? null,
       ipAddress: ip ?? null,
     });
 
-    const status: LoginResult['status'] = user.totpVerifiedAt
-      ? 'totp_required'
-      : 'totp_setup_required';
+    // 2FA disabled: email + password is sufficient — go straight to the
+    // dashboard instead of routing through the TOTP setup/verify pages.
+    const status: LoginResult['status'] = 'success';
 
     const payload: AdminJwtPayload = {
       sub: user.userId,
