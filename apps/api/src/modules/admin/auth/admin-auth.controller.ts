@@ -63,6 +63,13 @@ export class AdminAuthController {
     // it would shadow the new path='/' cookie on /api/v1/admin/* requests
     // (browser sends the more-specific path first) and cause 401s.
     void reply.clearCookie(ADMIN_COOKIE, { path: '/api/v1/admin', ...domainOpt });
+    // Also drop any stale HOST-ONLY cookie from logins issued before
+    // COOKIE_DOMAIN was set; otherwise the browser sends both it and the new
+    // domain-scoped cookie, and the API may read the stale (expired) one first.
+    if (domainOpt.domain) {
+      void reply.clearCookie(ADMIN_COOKIE, { path: '/' });
+      void reply.clearCookie(ADMIN_ACTIVITY_COOKIE, { path: '/' });
+    }
     void reply.setCookie(ADMIN_COOKIE, result.accessToken, {
       httpOnly: true,
       secure: this.cfg.isProd,

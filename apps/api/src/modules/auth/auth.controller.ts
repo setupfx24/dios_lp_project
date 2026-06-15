@@ -28,6 +28,14 @@ export class AuthController {
     @Res({ passthrough: true }) reply: FastifyReply,
   ): Promise<{ userId: string }> {
     const { userId, accessToken } = await this.auth.login(dto);
+    const domainOpt = cookieDomainOpt(this.cfg);
+    // Self-heal: when cookies are domain-scoped, drop any stale HOST-ONLY
+    // lp_access left from logins issued before COOKIE_DOMAIN was configured.
+    // Otherwise the browser sends both (old host-only + new domain-scoped) and
+    // the API may read the stale, expired one first → 401 on every authed call.
+    if (domainOpt.domain) {
+      void reply.clearCookie('lp_access', { path: '/' });
+    }
     void reply.setCookie('lp_access', accessToken, {
       httpOnly: true,
       secure: this.cfg.isProd,
@@ -35,7 +43,7 @@ export class AuthController {
       path: '/',
       // Share across trade.* + api.* subdomains so the web app middleware can
       // read it; unset => host-only (single-host/local).
-      ...cookieDomainOpt(this.cfg),
+      ...domainOpt,
     });
     await this.audit.record({
       actorType: 'user',
