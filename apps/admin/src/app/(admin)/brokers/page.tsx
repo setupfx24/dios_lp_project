@@ -12,193 +12,131 @@ import { Label } from '@/components/ui/label';
 import { adminApi } from '@/lib/sdk';
 
 /**
- * Broker onboarding (bulk) + roster. Add one or more broker rows and create
- * them all at once. Each row is created independently via the audited
- * single-create endpoint, so a bad row (e.g. duplicate email) fails on its
- * own without blocking the others. Generated credentials are shown ONCE.
+ * Broker onboarding (single broker) + roster. This platform supports exactly
+ * ONE broker: once a broker exists the onboarding form is replaced by a notice
+ * and the backend rejects any further create. Generated credentials are shown
+ * ONCE and cannot be retrieved again.
  */
-type RowStatus = 'idle' | 'creating' | 'done' | 'error';
-
-interface BrokerRow {
-  id: number;
-  displayName: string;
-  contactEmail: string;
-  initialBalance: string;
-  currency: string;
-  status: RowStatus;
-  result?: CreateBrokerResult | undefined;
-  error?: string | undefined;
-}
-
-let nextRowId = 1;
-const blankRow = (): BrokerRow => ({
-  id: nextRowId++,
-  displayName: '',
-  contactEmail: '',
-  initialBalance: '5000',
-  currency: 'USD',
-  status: 'idle',
-});
-
-const rowValid = (r: BrokerRow): boolean =>
-  r.displayName.trim().length >= 2 && r.contactEmail.includes('@');
-
 export default function BrokersPage() {
   const qc = useQueryClient();
-  const [rows, setRows] = useState<BrokerRow[]>(() => [blankRow()]);
+  const [displayName, setDisplayName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [initialBalance, setInitialBalance] = useState('5000');
+  const [currency, setCurrency] = useState('USD');
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [created, setCreated] = useState<CreateBrokerResult | null>(null);
 
   const brokers = useQuery({ queryKey: ['brokers'], queryFn: () => adminApi.listBrokers() });
 
-  const patchRow = (id: number, patch: Partial<BrokerRow>) =>
-    setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)));
-  const addRow = () => setRows((rs) => [...rs, blankRow()]);
-  const removeRow = (id: number) =>
-    setRows((rs) => (rs.length > 1 ? rs.filter((r) => r.id !== id) : rs));
+  const brokerExists = (brokers.data?.length ?? 0) > 0;
+  const formValid = displayName.trim().length >= 2 && contactEmail.includes('@');
 
-  const pendingCount = rows.filter((r) => r.status !== 'done' && rowValid(r)).length;
-
-  async function createAll() {
+  async function createBroker() {
     setBusy(true);
-    // Create sequentially for stable, ordered results.
-    const toCreate = rows.filter((r) => r.status !== 'done' && rowValid(r));
-    for (const r of toCreate) {
-      patchRow(r.id, { status: 'creating', error: undefined });
-      try {
-        const res = await adminApi.createBroker({
-          displayName: r.displayName.trim(),
-          contactEmail: r.contactEmail.trim(),
-          initialBalance: r.initialBalance.trim() || '5000',
-          currency: r.currency.trim() || 'USD',
-        });
-        patchRow(r.id, { status: 'done', result: res });
-      } catch (err) {
-        patchRow(r.id, { status: 'error', error: err instanceof Error ? err.message : 'Failed' });
-      }
+    setError(null);
+    try {
+      const res = await adminApi.createBroker({
+        displayName: displayName.trim(),
+        contactEmail: contactEmail.trim(),
+        initialBalance: initialBalance.trim() || '5000',
+        currency: currency.trim() || 'USD',
+      });
+      setCreated(res);
+      void qc.invalidateQueries({ queryKey: ['brokers'] });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create broker');
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
-    void qc.invalidateQueries({ queryKey: ['brokers'] });
-  }
-
-  const created = rows.flatMap((r) => (r.status === 'done' && r.result ? [r.result] : []));
-
-  function startNewBatch() {
-    nextRowId = 1;
-    setRows([blankRow()]);
   }
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold text-primary">Brokers</h1>
 
-      {created.length > 0 && (
+      {created && (
         <Card className="border-destructive/40 bg-destructive/5">
           <CardHeader>
             <CardTitle className="text-destructive">
-              {created.length} broker{created.length > 1 ? 's' : ''} created — save these now (shown
-              only once)
+              Broker created — save these now (shown only once)
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
               Passwords and API secrets are hashed at rest and cannot be retrieved again. Paste each
-              into the matching dios broker&apos;s Swistrade Book Management settings.
+              into the dios broker&apos;s Swistrade Book Management settings.
             </p>
-            {created.map((b) => (
-              <CredentialBundle key={b.brokerId} bundle={b} />
-            ))}
-            <Button variant="outline" onClick={startNewBatch}>
-              Done — start a new batch
+            <CredentialBundle bundle={created} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Onboarding form — shown only while NO broker exists (one broker max). */}
+      {!brokerExists && !created && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Onboard broker</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              This platform supports a single broker. Once created, no further brokers can be added.
+            </p>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label>Display name</Label>
+                <Input
+                  value={displayName}
+                  disabled={busy}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Acme Broker"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Contact / login email</Label>
+                <Input
+                  type="email"
+                  value={contactEmail}
+                  disabled={busy}
+                  onChange={(e) => setContactEmail(e.target.value)}
+                  placeholder="ops@acme.example"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Opening balance</Label>
+                <Input
+                  value={initialBalance}
+                  disabled={busy}
+                  onChange={(e) => setInitialBalance(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Currency</Label>
+                <Input
+                  value={currency}
+                  disabled={busy}
+                  onChange={(e) => setCurrency(e.target.value)}
+                />
+              </div>
+            </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <Button onClick={() => void createBroker()} disabled={busy || !formValid}>
+              {busy ? 'Creating…' : 'Create broker'}
             </Button>
           </CardContent>
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Onboard brokers</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {rows.map((r, idx) => (
-            <div key={r.id} className="space-y-3 rounded-lg border border-border p-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground">Broker {idx + 1}</span>
-                <div className="flex items-center gap-2">
-                  {r.status === 'done' && (
-                    <span className="text-xs font-semibold text-emerald-500">✓ Created</span>
-                  )}
-                  {r.status === 'creating' && (
-                    <span className="text-xs text-muted-foreground">Creating…</span>
-                  )}
-                  {r.status === 'error' && (
-                    <span className="text-xs font-semibold text-destructive" title={r.error}>
-                      ✕ {r.error}
-                    </span>
-                  )}
-                  {rows.length > 1 && r.status !== 'done' && (
-                    <button
-                      type="button"
-                      onClick={() => removeRow(r.id)}
-                      className="text-xs text-muted-foreground hover:text-destructive"
-                      aria-label="Remove broker row"
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              </div>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div className="space-y-1">
-                  <Label>Display name</Label>
-                  <Input
-                    value={r.displayName}
-                    disabled={r.status === 'done' || busy}
-                    onChange={(e) => patchRow(r.id, { displayName: e.target.value })}
-                    placeholder="Acme Broker"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Contact / login email</Label>
-                  <Input
-                    type="email"
-                    value={r.contactEmail}
-                    disabled={r.status === 'done' || busy}
-                    onChange={(e) => patchRow(r.id, { contactEmail: e.target.value })}
-                    placeholder="ops@acme.example"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Opening balance</Label>
-                  <Input
-                    value={r.initialBalance}
-                    disabled={r.status === 'done' || busy}
-                    onChange={(e) => patchRow(r.id, { initialBalance: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Currency</Label>
-                  <Input
-                    value={r.currency}
-                    disabled={r.status === 'done' || busy}
-                    onChange={(e) => patchRow(r.id, { currency: e.target.value })}
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Button variant="outline" onClick={addRow} disabled={busy}>
-              + Add another broker
-            </Button>
-            <Button onClick={() => void createAll()} disabled={busy || pendingCount === 0}>
-              {busy
-                ? 'Creating…'
-                : `Create ${pendingCount > 0 ? pendingCount : ''} broker${pendingCount === 1 ? '' : 's'}`}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {brokerExists && !created && (
+        <Card>
+          <CardContent className="py-4">
+            <p className="text-sm text-muted-foreground">
+              A broker already exists. This platform supports only one broker, so onboarding is
+              disabled.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

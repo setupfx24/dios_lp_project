@@ -195,6 +195,14 @@ export class AdminClient {
     );
   }
 
+  logout() {
+    return this.request(
+      '/api/v1/admin/auth/logout',
+      { method: 'POST' },
+      z.object({ ok: z.literal(true) }),
+    );
+  }
+
   // -------- Interventions --------
   walletAdjust(input: {
     brokerId: string;

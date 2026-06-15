@@ -87,6 +87,17 @@ export class BrokersAdminController {
   }> {
     const tx = requireTx(ctx);
 
+    // This platform supports exactly ONE broker. Reject onboarding if a broker
+    // already exists (the UI also hides the form, this is the authoritative guard).
+    const existingBroker = await tx.select({ brokerId: brokers.brokerId }).from(brokers).limit(1);
+    if (existingBroker[0]) {
+      throw new DomainException(
+        ErrorCode.CONFLICT,
+        'A broker already exists. Only one broker can be onboarded on this platform.',
+        HttpStatus.CONFLICT,
+      );
+    }
+
     const amount = new Money(body.initialBalance);
     if (amount.isZero() || amount.isNegative()) {
       throw new DomainException(
