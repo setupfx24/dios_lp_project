@@ -1,5 +1,7 @@
 import { z, type ZodSchema } from 'zod';
 
+import { openPositionMarkSchema } from '@lp/validators';
+
 import { SdkError } from './client.js';
 
 export interface AdminSdkOptions {
@@ -300,4 +302,22 @@ export class AdminClient {
       }),
     );
   }
+
+  /** Latest live open-position snapshot for one broker (polled by the UI). */
+  listPositions(brokerId: string) {
+    return this.request(
+      `/api/v1/admin/operations/positions?brokerId=${encodeURIComponent(brokerId)}`,
+      { method: 'GET' },
+      adminPositionSnapshot,
+    );
+  }
 }
+
+const adminPositionSnapshot = z.object({
+  brokerId: z.string(),
+  marks: z.array(openPositionMarkSchema),
+  totalUnrealizedPnl: z.string(),
+  ts: z.number(),
+});
+
+export type AdminPositionSnapshot = z.infer<typeof adminPositionSnapshot>;

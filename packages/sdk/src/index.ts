@@ -6,8 +6,15 @@ export {
   type BrokerWallet,
   type LedgerEntryDto,
   type OrderDto,
+  type OpenPositionMark,
+  type PositionSnapshot,
 } from './client.js';
-export { AdminClient, type AdminSdkOptions, type CreateBrokerResult } from './admin-client.js';
+export {
+  AdminClient,
+  type AdminSdkOptions,
+  type CreateBrokerResult,
+  type AdminPositionSnapshot,
+} from './admin-client.js';
 export type {
   LoginDto,
   ApiKeyCreateDto,

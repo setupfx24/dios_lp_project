@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  Activity,
   AlertOctagon,
   ClipboardList,
   Cog,
@@ -18,6 +19,7 @@ import { cn } from '@/lib/cn';
 
 const NAV = [
   { href: '/operations', label: 'Operations', icon: Cog },
+  { href: '/positions', label: 'Live Positions', icon: Activity },
   { href: '/brokers', label: 'Brokers', icon: Users },
   { href: '/interventions', label: 'Interventions', icon: Wallet },
   { href: '/approvals', label: 'Approvals', icon: ClipboardList },

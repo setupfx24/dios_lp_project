@@ -2,9 +2,11 @@ import { z, type ZodSchema } from 'zod';
 
 import {
   loginSchema,
+  openPositionMarkSchema,
   tradeRecordSchema,
   tradeListQuerySchema,
   type LoginDto,
+  type OpenPositionMarkDto,
   type TradeRecordDto,
   type TradeListQuery,
 } from '@lp/validators';
@@ -188,7 +190,22 @@ export class LpClient {
       z.object({ items: z.array(orderSchema) }),
     );
   }
+
+  // -------- Live positions (latest mark-to-market snapshot) --------
+  getPositions(): Promise<PositionSnapshot> {
+    return this.request('/api/v1/broker/positions', { method: 'GET' }, positionSnapshotSchema);
+  }
 }
+
+const positionSnapshotSchema = z.object({
+  brokerId: z.string(),
+  marks: z.array(openPositionMarkSchema),
+  totalUnrealizedPnl: z.string(),
+  ts: z.number(),
+});
+
+export type OpenPositionMark = OpenPositionMarkDto;
+export type PositionSnapshot = z.infer<typeof positionSnapshotSchema>;
 
 // Over the wire these arrive as strings already (bigint via the API's
 // BigInt JSON shim; timestamps as ISO) — no transform needed.
