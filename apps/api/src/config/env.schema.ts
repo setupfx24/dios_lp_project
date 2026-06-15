@@ -1,5 +1,13 @@
 import { z } from 'zod';
 
+// Compose passes `${VAR:-}` as an empty string "" when the var is unset, which
+// `.min(1).optional()` would reject (optional only skips `undefined`), crashing
+// boot. Coerce blank/whitespace to undefined so these vars are truly optional.
+const optionalDomain = z.preprocess(
+  (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+  z.string().trim().min(1).optional(),
+);
+
 export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
@@ -43,7 +51,7 @@ export const envSchema = z.object({
   // live on different subdomains (e.g. trade./admin./api.swistrade.com), set a
   // parent domain like ".swistrade.com" so each app's middleware can read the
   // cookie the API sets; otherwise the post-login redirect bounces to /login.
-  COOKIE_DOMAIN: z.string().trim().min(1).optional(),
+  COOKIE_DOMAIN: optionalDomain,
 
   // Admin auth — separate secret + cookie from broker JWT.
   ADMIN_JWT_SECRET: z.string().min(32, 'ADMIN_JWT_SECRET must be at least 32 characters'),
@@ -51,7 +59,7 @@ export const envSchema = z.object({
 
   // Deprecated alias for COOKIE_DOMAIN, kept so already-deployed envs that only
   // set this keep working. Prefer COOKIE_DOMAIN. Read via the cookieDomainOpt helper.
-  ADMIN_COOKIE_DOMAIN: z.string().trim().min(1).optional(),
+  ADMIN_COOKIE_DOMAIN: optionalDomain,
 
   // Reauth window for sensitive admin actions (default 5 minutes).
   ADMIN_REAUTH_WINDOW_SECONDS: z.coerce.number().int().min(60).max(900).default(300),
