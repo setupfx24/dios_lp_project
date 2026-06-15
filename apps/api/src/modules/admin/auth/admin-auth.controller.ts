@@ -2,6 +2,7 @@ import { Body, Controller, Post, Req, Res, UseGuards, UsePipes } from '@nestjs/c
 import { ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
 
+import { cookieDomainOpt } from '../../../common/cookie-domain.js';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
 import { AppConfigService } from '../../../config/config.module.js';
 import { requireAdminCtx } from '../common/admin-context.js';
@@ -57,7 +58,7 @@ export class AdminAuthController {
     );
     // Share the cookie across subdomains (admin.* + api.*) when configured, so
     // the admin app's middleware can read what the API sets. Unset => host-only.
-    const domainOpt = this.cookieDomainOpt();
+    const domainOpt = cookieDomainOpt(this.cfg);
     // Self-heal: drop any stale cookie left at the previous narrower path —
     // it would shadow the new path='/' cookie on /api/v1/admin/* requests
     // (browser sends the more-specific path first) and cause 401s.
@@ -85,17 +86,11 @@ export class AdminAuthController {
   @Post('logout')
   logout(@Res({ passthrough: true }) reply: FastifyReply): { ok: true } {
     // Must mirror the domain used at login, else the clear-cookie misses.
-    const domainOpt = this.cookieDomainOpt();
+    const domainOpt = cookieDomainOpt(this.cfg);
     void reply.clearCookie(ADMIN_COOKIE, { path: '/', ...domainOpt });
     void reply.clearCookie(ADMIN_COOKIE, { path: '/api/v1/admin', ...domainOpt });
     void reply.clearCookie(ADMIN_ACTIVITY_COOKIE, { path: '/', ...domainOpt });
     return { ok: true };
-  }
-
-  /** `{ domain }` when ADMIN_COOKIE_DOMAIN is set, else `{}` (host-only). */
-  private cookieDomainOpt(): { domain?: string } {
-    const domain = this.cfg.get('ADMIN_COOKIE_DOMAIN');
-    return domain ? { domain } : {};
   }
 
   // ---- 2FA setup (still needs JWT but TOTP-verified is exempted) ----

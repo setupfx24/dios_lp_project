@@ -88,8 +88,10 @@ services:
       ROUTES_ENABLED: ${ROUTES_ENABLED:-all}
       CORS_ORIGINS: http://localhost:3001,http://localhost:3002
       SWAGGER_ENABLED: 'true'
-      # Empty by default (host-only cookie). Prod sets it via --env-file so the
-      # admin auth cookie is shared across admin.* and api.* subdomains.
+      # Empty by default (host-only cookie). Prod sets one via --env-file so the
+      # auth cookies are shared across trade.*/admin.*/api.* subdomains.
+      # COOKIE_DOMAIN is canonical; ADMIN_COOKIE_DOMAIN is the legacy fallback.
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
       ADMIN_COOKIE_DOMAIN: ${ADMIN_COOKIE_DOMAIN:-}
     ports: ['3000:3000']
     depends_on:

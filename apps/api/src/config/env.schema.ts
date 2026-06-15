@@ -38,15 +38,19 @@ export const envSchema = z.object({
    */
   ROUTES_ENABLED: z.enum(['all', 'broker', 'admin']).default('all'),
 
+  // Domain attribute for ALL auth cookies (broker + admin). Leave unset for
+  // host-only cookies (single-host/localhost deploys). When the UIs and API
+  // live on different subdomains (e.g. trade./admin./api.swistrade.com), set a
+  // parent domain like ".swistrade.com" so each app's middleware can read the
+  // cookie the API sets; otherwise the post-login redirect bounces to /login.
+  COOKIE_DOMAIN: z.string().trim().min(1).optional(),
+
   // Admin auth — separate secret + cookie from broker JWT.
   ADMIN_JWT_SECRET: z.string().min(32, 'ADMIN_JWT_SECRET must be at least 32 characters'),
   ADMIN_JWT_EXPIRY: z.string().default('15m'),
 
-  // Domain attribute for admin auth cookies. Leave unset for host-only cookies
-  // (single-host deploys). When the admin UI and API live on different
-  // subdomains (e.g. admin.swistrade.com + api.swistrade.com), set a parent
-  // domain like ".swistrade.com" so the admin app's middleware can read the
-  // cookie the API sets; otherwise the post-login redirect bounces to /login.
+  // Deprecated alias for COOKIE_DOMAIN, kept so already-deployed envs that only
+  // set this keep working. Prefer COOKIE_DOMAIN. Read via the cookieDomainOpt helper.
   ADMIN_COOKIE_DOMAIN: z.string().trim().min(1).optional(),
 
   // Reauth window for sensitive admin actions (default 5 minutes).

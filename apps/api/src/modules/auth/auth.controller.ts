@@ -3,6 +3,7 @@ import { ApiTags } from '@nestjs/swagger';
 
 import { loginSchema, type LoginDto } from '@lp/validators';
 
+import { cookieDomainOpt } from '../../common/cookie-domain.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { AppConfigService } from '../../config/config.module.js';
 import { AuditService } from '../audit/audit.service.js';
@@ -32,6 +33,9 @@ export class AuthController {
       secure: this.cfg.isProd,
       sameSite: 'strict',
       path: '/',
+      // Share across trade.* + api.* subdomains so the web app middleware can
+      // read it; unset => host-only (single-host/local).
+      ...cookieDomainOpt(this.cfg),
     });
     await this.audit.record({
       actorType: 'user',
@@ -44,7 +48,7 @@ export class AuthController {
 
   @Post('logout')
   logout(@Res({ passthrough: true }) reply: FastifyReply): { ok: true } {
-    void reply.clearCookie('lp_access', { path: '/' });
+    void reply.clearCookie('lp_access', { path: '/', ...cookieDomainOpt(this.cfg) });
     return { ok: true };
   }
 }
