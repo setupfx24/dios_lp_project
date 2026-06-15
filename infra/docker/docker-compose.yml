@@ -80,6 +80,9 @@ services:
       DATABASE_URL: postgres://lp_app:${LP_APP_PW:-changeme_in_compose_env}@postgres:5432/lp
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:-devsecret_at_least_32_characters_long}
+      # Broker JWT lifetime. The 15m default logs the broker console out
+      # mid-session (no refresh flow); match the admin 12h session cap.
+      JWT_EXPIRY: ${JWT_EXPIRY:-12h}
       ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET:-devadminsecret_at_least_32_characters_long}
       TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:-devkey_at_least_32_characters_long_for_aes_gcm}
       ROUTES_ENABLED: ${ROUTES_ENABLED:-all}

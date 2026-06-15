@@ -80,6 +80,8 @@ services:
       DATABASE_URL: postgres://lp_app:${LP_APP_PW:-changeme_in_compose_env}@postgres:5432/lp
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:-devsecret_at_least_32_characters_long}
+      # Broker JWT lifetime — match the admin 12h cap (no refresh flow).
+      JWT_EXPIRY: ${JWT_EXPIRY:-12h}
       ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET:-devadminsecret_at_least_32_characters_long}
       # Admin JWT lifetime (default is 15m which logs API calls out mid-session
       # since there's no refresh flow). Match the 12h session cap for local use.
