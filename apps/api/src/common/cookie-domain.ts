@@ -10,6 +10,13 @@ import type { AppConfigService } from '../config/config.module.js';
  * deprecated alias honoured for already-deployed environments.
  */
 export function cookieDomainOpt(cfg: AppConfigService): { domain?: string } {
-  const domain = cfg.get('COOKIE_DOMAIN') ?? cfg.get('ADMIN_COOKIE_DOMAIN');
+  // ConfigService can surface an unset var as the empty string "" (compose
+  // passes `${VAR:-}` => ""). Normalise blank/whitespace to undefined first so
+  // the ?? fallback chain actually advances past an unset COOKIE_DOMAIN.
+  const clean = (key: 'COOKIE_DOMAIN' | 'ADMIN_COOKIE_DOMAIN'): string | undefined => {
+    const v = cfg.get(key)?.trim();
+    return v ? v : undefined;
+  };
+  const domain = clean('COOKIE_DOMAIN') ?? clean('ADMIN_COOKIE_DOMAIN');
   return domain ? { domain } : {};
 }
