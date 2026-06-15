@@ -42,13 +42,9 @@ export const orderRequestSchema = z
         });
       }
     }
-    if (data.type === 'MARKET' && data.price !== undefined) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['price'],
-        message: 'price must be omitted for MARKET orders',
-      });
-    }
+    // MARKET orders may carry an optional price: when an upstream broker
+    // (A-Book routing) has already executed the fill, it passes its executed
+    // price so the LP records the same price instead of a reference fallback.
   });
 
 export const orderRecordSchema = z.object({

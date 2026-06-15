@@ -28,15 +28,21 @@ describe('orderRequestSchema', () => {
     }
   });
 
-  it('rejects MARKET order with a price', () => {
+  it('accepts MARKET order without a price', () => {
+    const { price: _omit, ...rest } = baseValidLimit;
+    void _omit;
+    const result = orderRequestSchema.safeParse({ ...rest, type: 'MARKET' });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts MARKET order with an execution price (A-Book pass-through)', () => {
+    // An upstream broker routing an already-executed fill passes its price so
+    // the LP records the same price instead of a reference fallback.
     const result = orderRequestSchema.safeParse({
       ...baseValidLimit,
       type: 'MARKET',
     });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues.some((i) => i.path[0] === 'price')).toBe(true);
-    }
+    expect(result.success).toBe(true);
   });
 
   it('rejects negative quantity', () => {

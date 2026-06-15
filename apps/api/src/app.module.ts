@@ -9,6 +9,7 @@ import { RedisModule } from './infrastructure/redis.module.js';
 import { AdminModule } from './modules/admin/admin.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
+import { BrokerPortalModule } from './modules/broker-portal/broker-portal.module.js';
 import { BrokersModule } from './modules/brokers/brokers.module.js';
 import { ChargesModule } from './modules/charges/charges.module.js';
 import { HealthModule } from './modules/health/health.module.js';
@@ -95,7 +96,13 @@ export class AppModule {
       RiskModule,
     ];
 
-    const brokerImports = [AuthModule, OrdersModule, TradesModule, WebsocketModule];
+    const brokerImports = [
+      AuthModule,
+      OrdersModule,
+      TradesModule,
+      WebsocketModule,
+      BrokerPortalModule,
+    ];
     const adminImports = [AdminModule];
 
     const imports = [...baseImports];

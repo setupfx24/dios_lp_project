@@ -13,7 +13,13 @@ export function middleware(req: NextRequest) {
   res.headers.set('Referrer-Policy', 'no-referrer');
   res.headers.set(
     'Content-Security-Policy',
-    "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; connect-src 'self' " +
+    // Next.js injects inline hydration/runtime scripts, so script-src must
+    // allow them ('unsafe-inline' + 'unsafe-eval'); without an explicit
+    // script-src the strict default-src blocks them and the app never
+    // hydrates (stuck on "Loading…"). Production-grade alternative: per-request
+    // nonces.
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+      "img-src 'self' data:; style-src 'self' 'unsafe-inline'; connect-src 'self' " +
       (process.env.NEXT_PUBLIC_API_URL ?? '*') +
       "; frame-ancestors 'none'",
   );
@@ -47,5 +53,7 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  // Exclude Next internals + static icon assets so the auth redirect doesn't
+  // intercept them (otherwise /icon.svg 307-redirects to /login).
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png).*)'],
 };

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { eq, sql } from 'drizzle-orm';
+import { desc, eq, sql } from 'drizzle-orm';
 
 import { ulid } from '@lp/utils';
 
@@ -76,5 +76,23 @@ export class LedgerRepository {
 
   async findEntriesByWallet(walletId: string): Promise<LedgerEntryRow[]> {
     return this.db.select().from(ledgerEntries).where(eq(ledgerEntries.walletId, walletId));
+  }
+
+  /** All wallets owned by a broker (one per currency). */
+  async findWalletsByBroker(brokerId: string): Promise<WalletRow[]> {
+    return this.db.select().from(wallets).where(eq(wallets.brokerId, brokerId));
+  }
+
+  /** Recent ledger entries across all of a broker's wallets (newest first). */
+  async findEntriesByBroker(brokerId: string, limit = 100): Promise<LedgerEntryRow[]> {
+    const capped = Math.min(Math.max(limit, 1), 500);
+    const rows = await this.db
+      .select({ entry: ledgerEntries })
+      .from(ledgerEntries)
+      .innerJoin(wallets, eq(ledgerEntries.walletId, wallets.walletId))
+      .where(eq(wallets.brokerId, brokerId))
+      .orderBy(desc(ledgerEntries.id))
+      .limit(capped);
+    return rows.map((r) => r.entry);
   }
 }

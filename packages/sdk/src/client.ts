@@ -156,4 +156,93 @@ export class LpClient {
       tradeRecordSchema,
     );
   }
+
+  // -------- Account / wallet / ledger / orders (broker portal) --------
+  getMe(): Promise<BrokerMe> {
+    return this.request('/api/v1/broker/me', { method: 'GET' }, brokerMeSchema);
+  }
+
+  getWallet(): Promise<{ wallets: BrokerWallet[] }> {
+    return this.request(
+      '/api/v1/broker/wallet',
+      { method: 'GET' },
+      z.object({ wallets: z.array(brokerWalletSchema) }),
+    );
+  }
+
+  listLedger(limit = 100): Promise<{ items: LedgerEntryDto[] }> {
+    return this.request(
+      `/api/v1/broker/ledger?limit=${limit}`,
+      { method: 'GET' },
+      z.object({ items: z.array(ledgerEntrySchema) }),
+    );
+  }
+
+  listOrders(query: { status?: string; limit?: number } = {}): Promise<{ items: OrderDto[] }> {
+    const search = new URLSearchParams();
+    if (query.status) search.set('status', query.status);
+    if (query.limit) search.set('limit', String(query.limit));
+    return this.request(
+      `/api/v1/broker/orders?${search.toString()}`,
+      { method: 'GET' },
+      z.object({ items: z.array(orderSchema) }),
+    );
+  }
 }
+
+// Over the wire these arrive as strings already (bigint via the API's
+// BigInt JSON shim; timestamps as ISO) — no transform needed.
+const idToString = z.string();
+const dateToIso = z.string();
+
+const brokerMeSchema = z.object({
+  broker: z.object({
+    brokerId: z.string(),
+    displayName: z.string(),
+    contactEmail: z.string(),
+    status: z.string(),
+    createdAt: dateToIso,
+  }),
+  user: z.object({ email: z.string(), role: z.string() }).nullable(),
+});
+
+const brokerWalletSchema = z.object({
+  walletId: z.string(),
+  currency: z.string(),
+  balance: z.string(),
+});
+
+const ledgerEntrySchema = z.object({
+  id: idToString,
+  entryId: z.string(),
+  walletId: z.string(),
+  direction: z.enum(['DEBIT', 'CREDIT']),
+  amount: z.string(),
+  currency: z.string(),
+  referenceType: z.string(),
+  referenceId: z.string(),
+  description: z.string(),
+  createdAt: dateToIso,
+});
+
+const orderSchema = z.object({
+  id: idToString,
+  orderId: z.string(),
+  clientOrderId: z.string(),
+  brokerId: z.string(),
+  symbol: z.string(),
+  side: z.enum(['BUY', 'SELL']),
+  type: z.string(),
+  quantity: z.string(),
+  price: z.string().nullable(),
+  timeInForce: z.string(),
+  status: z.string(),
+  rejectionReason: z.string().nullable(),
+  receivedAt: dateToIso,
+  updatedAt: dateToIso,
+});
+
+export type BrokerMe = z.infer<typeof brokerMeSchema>;
+export type BrokerWallet = z.infer<typeof brokerWalletSchema>;
+export type LedgerEntryDto = z.infer<typeof ledgerEntrySchema>;
+export type OrderDto = z.infer<typeof orderSchema>;

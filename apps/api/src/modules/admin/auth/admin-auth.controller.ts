@@ -15,6 +15,7 @@ import type { UserRow } from '../../auth/schema/user.schema.js';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
 const ADMIN_COOKIE = 'lp_admin_access';
+const ADMIN_ACTIVITY_COOKIE = 'lp_admin_last_activity';
 
 const loginBodySchema = z.object({
   email: z.string().trim().toLowerCase().email(),
@@ -54,18 +55,33 @@ export class AdminAuthController {
       req.headers['user-agent'],
       req.ip,
     );
+    // Self-heal: drop any stale cookie left at the previous narrower path —
+    // it would shadow the new path='/' cookie on /api/v1/admin/* requests
+    // (browser sends the more-specific path first) and cause 401s.
+    void reply.clearCookie(ADMIN_COOKIE, { path: '/api/v1/admin' });
     void reply.setCookie(ADMIN_COOKIE, result.accessToken, {
       httpOnly: true,
       secure: this.cfg.isProd,
       sameSite: 'strict',
-      path: '/api/v1/admin',
+      path: '/',
+    });
+    // Reset the activity marker the admin-app middleware uses for its idle
+    // check; otherwise a stale value from a prior session makes the first
+    // post-login request look idle and bounces back to /login?reason=idle.
+    void reply.setCookie(ADMIN_ACTIVITY_COOKIE, String(Date.now()), {
+      httpOnly: false,
+      secure: this.cfg.isProd,
+      sameSite: 'strict',
+      path: '/',
     });
     return { status: result.status };
   }
 
   @Post('logout')
   logout(@Res({ passthrough: true }) reply: FastifyReply): { ok: true } {
+    void reply.clearCookie(ADMIN_COOKIE, { path: '/' });
     void reply.clearCookie(ADMIN_COOKIE, { path: '/api/v1/admin' });
+    void reply.clearCookie(ADMIN_ACTIVITY_COOKIE, { path: '/' });
     return { ok: true };
   }
 

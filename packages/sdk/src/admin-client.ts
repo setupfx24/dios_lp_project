@@ -52,6 +52,28 @@ const walletAdjustResponse = z.discriminatedUnion('status', [
   z.object({ status: z.literal('queued_for_approval'), actionId: z.string() }),
 ]);
 
+const brokerRowSchema = z.object({
+  id: z.union([z.string(), z.number(), z.bigint()]).transform((v) => String(v)),
+  brokerId: z.string(),
+  displayName: z.string(),
+  contactEmail: z.string(),
+  status: z.string(),
+  createdAt: z
+    .union([z.string(), z.date()])
+    .transform((v) => (v instanceof Date ? v.toISOString() : v)),
+});
+
+const createBrokerResponse = z.object({
+  brokerId: z.string(),
+  displayName: z.string(),
+  contactEmail: z.string(),
+  login: z.object({ email: z.string(), password: z.string() }),
+  apiKey: z.object({ prefix: z.string(), secret: z.string(), full: z.string() }),
+  wallet: z.object({ walletId: z.string(), currency: z.string(), balance: z.string() }),
+});
+
+export type CreateBrokerResult = z.infer<typeof createBrokerResponse>;
+
 /**
  * Admin-side typed fetch client. Separate from `LpClient` because:
  *   - different cookie name (`lp_admin_access`)
@@ -185,6 +207,25 @@ export class AdminClient {
       '/api/v1/admin/interventions/wallet-adjust',
       { method: 'POST', body: JSON.stringify(input) },
       walletAdjustResponse,
+    );
+  }
+
+  // -------- Brokers --------
+  listBrokers() {
+    return this.request('/api/v1/admin/brokers', { method: 'GET' }, z.array(brokerRowSchema));
+  }
+
+  createBroker(input: {
+    displayName: string;
+    contactEmail: string;
+    loginEmail?: string;
+    initialBalance?: string;
+    currency?: string;
+  }) {
+    return this.request(
+      '/api/v1/admin/brokers',
+      { method: 'POST', body: JSON.stringify(input) },
+      createBrokerResponse,
     );
   }
 

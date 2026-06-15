@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 
 import { ulid } from '@lp/utils';
 
@@ -40,5 +40,17 @@ export class OrdersRepository {
   async findById(orderId: string): Promise<OrderRow | null> {
     const rows = await this.db.select().from(orders).where(eq(orders.orderId, orderId)).limit(1);
     return rows[0] ?? null;
+  }
+
+  /** A broker's orders, newest first, optionally filtered by status. */
+  async findByBroker(
+    brokerId: string,
+    opts: { limit?: number; status?: OrderRow['status'] } = {},
+  ): Promise<OrderRow[]> {
+    const limit = Math.min(Math.max(opts.limit ?? 100, 1), 500);
+    const where = opts.status
+      ? and(eq(orders.brokerId, brokerId), eq(orders.status, opts.status))
+      : eq(orders.brokerId, brokerId);
+    return this.db.select().from(orders).where(where).orderBy(desc(orders.id)).limit(limit);
   }
 }

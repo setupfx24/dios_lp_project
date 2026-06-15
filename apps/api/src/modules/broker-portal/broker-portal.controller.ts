@@ -1,0 +1,119 @@
+import { Controller, Get, HttpStatus, Query, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+
+import { ErrorCode } from '@lp/constants';
+
+import {
+  CurrentUser,
+  type CurrentUserPayload,
+} from '../../common/decorators/current-user.decorator.js';
+import { DomainException } from '../../common/exceptions/domain.exception.js';
+import { JwtGuard } from '../auth/jwt.guard.js';
+import { BrokersRepository } from '../brokers/brokers.repository.js';
+import { LedgerRepository } from '../ledger/ledger.repository.js';
+import { OrdersRepository } from '../orders/orders.repository.js';
+
+import type { OrderRow } from '../orders/schema/order.schema.js';
+
+/**
+ * Read-only broker-portal endpoints (JWT, broker-scoped). Powers the broker
+ * dashboard pages: account, wallet balance, ledger/transactions, orders.
+ * Trades live in TradesController; charges hang off trade detail.
+ */
+@ApiTags('broker/account')
+@ApiBearerAuth()
+@UseGuards(JwtGuard)
+@Controller('api/v1/broker')
+export class BrokerPortalController {
+  constructor(
+    private readonly brokers: BrokersRepository,
+    private readonly ledger: LedgerRepository,
+    private readonly orders: OrdersRepository,
+  ) {}
+
+  @Get('me')
+  async me(@CurrentUser() user: CurrentUserPayload | null) {
+    const brokerId = this.scope(user);
+    const broker = await this.brokers.findByBrokerId(brokerId);
+    if (!broker) {
+      throw new DomainException(ErrorCode.NOT_FOUND, 'Broker not found', HttpStatus.NOT_FOUND);
+    }
+    return {
+      broker: {
+        brokerId: broker.brokerId,
+        displayName: broker.displayName,
+        contactEmail: broker.contactEmail,
+        status: broker.status,
+        createdAt: broker.createdAt,
+      },
+      user: user ? { email: user.email, role: user.role } : null,
+    };
+  }
+
+  @Get('wallet')
+  async wallet(
+    @CurrentUser() user: CurrentUserPayload | null,
+    @Query('brokerId') requested?: string,
+  ) {
+    const brokerId = this.scope(user, requested);
+    const wallets = await this.ledger.findWalletsByBroker(brokerId);
+    const withBalance = await Promise.all(
+      wallets.map(async (w) => ({
+        walletId: w.walletId,
+        currency: w.currency,
+        balance: await this.ledger.getBalance(w.walletId),
+      })),
+    );
+    return { wallets: withBalance };
+  }
+
+  @Get('ledger')
+  async ledgerEntries(
+    @CurrentUser() user: CurrentUserPayload | null,
+    @Query('brokerId') requested?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const brokerId = this.scope(user, requested);
+    const items = await this.ledger.findEntriesByBroker(brokerId, Number(limit) || 100);
+    return { items };
+  }
+
+  @Get('orders')
+  async ordersList(
+    @CurrentUser() user: CurrentUserPayload | null,
+    @Query('brokerId') requested?: string,
+    @Query('status') status?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const brokerId = this.scope(user, requested);
+    const items = await this.orders.findByBroker(brokerId, {
+      limit: Number(limit) || 100,
+      ...(status ? { status: status as OrderRow['status'] } : {}),
+    });
+    return { items };
+  }
+
+  private scope(user: CurrentUserPayload | null, requested?: string): string {
+    if (!user) {
+      throw new DomainException(ErrorCode.AUTH_FORBIDDEN, 'No user', HttpStatus.FORBIDDEN);
+    }
+    if (user.role === 'broker_user') {
+      if (!user.brokerId) {
+        throw new DomainException(
+          ErrorCode.AUTH_FORBIDDEN,
+          'User missing brokerId',
+          HttpStatus.FORBIDDEN,
+        );
+      }
+      return user.brokerId;
+    }
+    if (!requested) {
+      throw new DomainException(
+        ErrorCode.VALIDATION_FAILED,
+        'brokerId is required for LP roles',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    return requested;
+  }
+}

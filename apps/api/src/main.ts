@@ -18,6 +18,12 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor.js
 import { TransformInterceptor } from './common/interceptors/transform.interceptor.js';
 import { AppConfigService } from './config/config.module.js';
 
+// Serialize bigint columns (e.g. trades.id) as strings so JSON responses
+// don't throw "Do not know how to serialize a BigInt".
+(BigInt.prototype as unknown as { toJSON: () => string }).toJSON = function (this: bigint): string {
+  return this.toString();
+};
+
 async function bootstrap(): Promise<void> {
   const adapter = new FastifyAdapter({
     logger: false, // we use nestjs-pino
@@ -25,18 +31,13 @@ async function bootstrap(): Promise<void> {
     bodyLimit: 1_048_576, // 1 MB
   });
 
-  // Capture raw body for HMAC verification.
-  adapter.getInstance().addHook('preParsing', (req, _reply, payload, done) => {
-    const chunks: Buffer[] = [];
-    payload.on('data', (chunk: Buffer) => chunks.push(chunk));
-    payload.on('end', () => {
-      (req as { rawBody?: string }).rawBody = Buffer.concat(chunks).toString('utf8');
-    });
-    done(null, payload);
-  });
-
+  // `rawBody: true` makes Nest keep the raw request buffer on `req.rawBody`
+  // (used for HMAC signature verification) while still parsing JSON into
+  // `req.body` normally. This replaces a manual preParsing hook that drained
+  // the stream and left req.body empty on guarded routes.
   const app = await NestFactory.create<NestFastifyApplication>(AppModule.register(), adapter, {
     bufferLogs: true,
+    rawBody: true,
   });
   app.useLogger(app.get(Logger));
 

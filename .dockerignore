@@ -1,0 +1,10 @@
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/coverage
+.git
+.github
+**/*.log
+docs/api/openapi.json
+infra/docker/docker-compose.manual.yml

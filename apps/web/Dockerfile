@@ -18,7 +18,7 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
 FROM node:20-alpine AS build
 RUN corepack enable
 WORKDIR /repo
-COPY --from=deps /repo/node_modules ./node_modules
+COPY --from=deps /repo ./
 COPY . .
 RUN pnpm --filter @lp/types --filter @lp/constants --filter @lp/utils \
         --filter @lp/validators --filter @lp/sdk build && \
