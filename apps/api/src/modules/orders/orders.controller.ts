@@ -41,6 +41,27 @@ export class OrdersController {
     private readonly audit: AuditService,
   ) {}
 
+  /**
+   * Lightweight auth probe for upstream A-Book routers (e.g. dios). Runs the
+   * same HmacGuard as order placement but writes nothing — it just confirms the
+   * API key authenticates and echoes the resolved brokerId so the caller can
+   * detect a brokerId mismatch before sending real orders. Sign it exactly like
+   * an order POST: `POST /api/v1/broker/orders/verify` with body `{}`.
+   */
+  @Post('verify')
+  @HttpCode(HttpStatus.OK)
+  verify(@Req() req: FastifyRequest): { ok: true; brokerId: string } {
+    const broker = req.broker;
+    if (!broker) {
+      throw new DomainException(
+        ErrorCode.AUTH_FORBIDDEN,
+        'No authenticated broker on request',
+        HttpStatus.FORBIDDEN,
+      );
+    }
+    return { ok: true, brokerId: broker.brokerId };
+  }
+
   @Post()
   @HttpCode(HttpStatus.ACCEPTED)
   @UsePipes(new ZodValidationPipe(orderRequestSchema))
