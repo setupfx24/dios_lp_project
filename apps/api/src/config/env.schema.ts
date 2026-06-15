@@ -42,6 +42,13 @@ export const envSchema = z.object({
   ADMIN_JWT_SECRET: z.string().min(32, 'ADMIN_JWT_SECRET must be at least 32 characters'),
   ADMIN_JWT_EXPIRY: z.string().default('15m'),
 
+  // Domain attribute for admin auth cookies. Leave unset for host-only cookies
+  // (single-host deploys). When the admin UI and API live on different
+  // subdomains (e.g. admin.swistrade.com + api.swistrade.com), set a parent
+  // domain like ".swistrade.com" so the admin app's middleware can read the
+  // cookie the API sets; otherwise the post-login redirect bounces to /login.
+  ADMIN_COOKIE_DOMAIN: z.string().trim().min(1).optional(),
+
   // Reauth window for sensitive admin actions (default 5 minutes).
   ADMIN_REAUTH_WINDOW_SECONDS: z.coerce.number().int().min(60).max(900).default(300),
 

@@ -55,15 +55,19 @@ export class AdminAuthController {
       req.headers['user-agent'],
       req.ip,
     );
+    // Share the cookie across subdomains (admin.* + api.*) when configured, so
+    // the admin app's middleware can read what the API sets. Unset => host-only.
+    const domainOpt = this.cookieDomainOpt();
     // Self-heal: drop any stale cookie left at the previous narrower path —
     // it would shadow the new path='/' cookie on /api/v1/admin/* requests
     // (browser sends the more-specific path first) and cause 401s.
-    void reply.clearCookie(ADMIN_COOKIE, { path: '/api/v1/admin' });
+    void reply.clearCookie(ADMIN_COOKIE, { path: '/api/v1/admin', ...domainOpt });
     void reply.setCookie(ADMIN_COOKIE, result.accessToken, {
       httpOnly: true,
       secure: this.cfg.isProd,
       sameSite: 'strict',
       path: '/',
+      ...domainOpt,
     });
     // Reset the activity marker the admin-app middleware uses for its idle
     // check; otherwise a stale value from a prior session makes the first
@@ -73,16 +77,25 @@ export class AdminAuthController {
       secure: this.cfg.isProd,
       sameSite: 'strict',
       path: '/',
+      ...domainOpt,
     });
     return { status: result.status };
   }
 
   @Post('logout')
   logout(@Res({ passthrough: true }) reply: FastifyReply): { ok: true } {
-    void reply.clearCookie(ADMIN_COOKIE, { path: '/' });
-    void reply.clearCookie(ADMIN_COOKIE, { path: '/api/v1/admin' });
-    void reply.clearCookie(ADMIN_ACTIVITY_COOKIE, { path: '/' });
+    // Must mirror the domain used at login, else the clear-cookie misses.
+    const domainOpt = this.cookieDomainOpt();
+    void reply.clearCookie(ADMIN_COOKIE, { path: '/', ...domainOpt });
+    void reply.clearCookie(ADMIN_COOKIE, { path: '/api/v1/admin', ...domainOpt });
+    void reply.clearCookie(ADMIN_ACTIVITY_COOKIE, { path: '/', ...domainOpt });
     return { ok: true };
+  }
+
+  /** `{ domain }` when ADMIN_COOKIE_DOMAIN is set, else `{}` (host-only). */
+  private cookieDomainOpt(): { domain?: string } {
+    const domain = this.cfg.get('ADMIN_COOKIE_DOMAIN');
+    return domain ? { domain } : {};
   }
 
   // ---- 2FA setup (still needs JWT but TOTP-verified is exempted) ----
