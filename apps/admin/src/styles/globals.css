@@ -4,19 +4,19 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 10%;
-    --card: 0 0% 100%;
-    /* Admin signature: warm orange primary, deep red accents. */
-    --primary: 16 90% 45%;
-    --primary-foreground: 0 0% 100%;
-    --muted: 30 30% 96%;
-    --muted-foreground: 30 15% 40%;
-    --accent: 16 80% 95%;
-    --accent-foreground: 16 80% 25%;
-    --destructive: 0 70% 45%;
+    /* Corecen-style dark operator console. */
+    --background: 0 0% 7%;
+    --foreground: 0 0% 95%;
+    --card: 0 0% 11%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 0 0% 16%;
+    --accent-foreground: 0 0% 95%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 30 30% 90%;
+    --border: 0 0% 18%;
     --radius: 0.5rem;
   }
 }

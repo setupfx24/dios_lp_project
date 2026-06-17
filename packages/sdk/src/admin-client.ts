@@ -297,6 +297,28 @@ export class AdminClient {
   }
 
   // -------- Operations --------
+  dashboard() {
+    return this.request(
+      '/api/v1/admin/operations/dashboard',
+      { method: 'GET' },
+      z.object({
+        brokersCount: z.number(),
+        totalBalance: z.string(),
+        totalPnl: z.string(),
+        totalCommission: z.string(),
+        recentBrokers: z.array(
+          z.object({
+            brokerId: z.string(),
+            displayName: z.string(),
+            contactEmail: z.string(),
+            status: z.string(),
+            balance: z.string(),
+          }),
+        ),
+      }),
+    );
+  }
+
   operationsMetrics() {
     return this.request(
       '/api/v1/admin/operations/metrics',

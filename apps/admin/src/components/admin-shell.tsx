@@ -5,6 +5,7 @@ import {
   ClipboardList,
   Cog,
   FileSearch,
+  LayoutDashboard,
   LogOut,
   ShieldAlert,
   Users,
@@ -20,6 +21,7 @@ import { cn } from '@/lib/cn';
 import { adminApi } from '@/lib/sdk';
 
 const NAV = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/operations', label: 'Operations', icon: Cog },
   { href: '/brokers', label: 'Brokers', icon: Users },
   { href: '/interventions', label: 'Interventions', icon: Wallet },

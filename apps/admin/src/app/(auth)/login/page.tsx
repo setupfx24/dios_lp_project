@@ -37,7 +37,7 @@ function LoginForm() {
       } else if (res.status === 'totp_required') {
         router.push('/two-factor');
       } else {
-        router.push('/operations');
+        router.push('/dashboard');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
