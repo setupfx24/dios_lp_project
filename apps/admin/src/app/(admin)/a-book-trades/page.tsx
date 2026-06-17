@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,8 @@ export default function ABookTradesPage() {
   const q = useQuery({ queryKey: ['admin-abook-trades'], queryFn: () => adminApi.aBookTrades() });
   const [userQ, setUserQ] = useState('');
   const [status, setStatus] = useState<'all' | 'OPEN' | 'CLOSE'>('all');
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const items = q.data?.items ?? [];
   const buys = items.filter((t) => t.side === 'BUY').length;
@@ -27,6 +29,14 @@ export default function ABookTradesPage() {
     if (needle && !(t.user ?? '').toLowerCase().includes(needle)) return false;
     return true;
   });
+
+  useEffect(() => {
+    setPage(1);
+  }, [userQ, status]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paged = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="space-y-6">
@@ -81,7 +91,7 @@ export default function ABookTradesPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((t) => (
+                {paged.map((t) => (
                   <tr key={t.tradeId} className="border-t border-border">
                     <td className="whitespace-nowrap py-2 text-muted-foreground">
                       {new Date(t.executedAt).toLocaleString()}
@@ -102,6 +112,31 @@ export default function ABookTradesPage() {
                 ))}
               </tbody>
             </table>
+          )}
+          {!q.isLoading && filtered.length > 0 && (
+            <div className="mt-4 flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">
+                Page {currentPage} of {totalPages} · {filtered.length} trades
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage <= 1}
+                  className="rounded-md bg-muted px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-40"
+                >
+                  Prev
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage >= totalPages}
+                  className="rounded-md bg-muted px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
