@@ -26,12 +26,15 @@ export default function TradesPage() {
   const { data, isLoading, error } = useTrades({ limit: 500 });
   const [q, setQ] = useState('');
   const [side, setSide] = useState<'all' | 'BUY' | 'SELL'>('all');
+  const [status, setStatus] = useState<'all' | 'OPEN' | 'CLOSE'>('all');
 
   const all = data?.items ?? [];
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return all.filter((t) => {
       if (side !== 'all' && t.side !== side) return false;
+      const tStatus = t.clientOrderId?.endsWith('-C') ? 'CLOSE' : 'OPEN';
+      if (status !== 'all' && tStatus !== status) return false;
       if (
         needle &&
         !(t.symbol.toLowerCase().includes(needle) || t.tradeId.toLowerCase().includes(needle))
@@ -39,7 +42,7 @@ export default function TradesPage() {
         return false;
       return true;
     });
-  }, [all, q, side]);
+  }, [all, q, side, status]);
 
   const totalVolume = all.reduce((s, t) => s + Number(t.quantity), 0);
   const notional = all.reduce((s, t) => s + Number(t.quantity) * Number(t.price), 0);
@@ -77,6 +80,15 @@ export default function TradesPage() {
             className="w-full rounded-md border border-zinc-700 bg-zinc-900 py-2 pl-9 pr-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-600"
           />
         </div>
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value as 'all' | 'OPEN' | 'CLOSE')}
+          className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
+        >
+          <option value="all">All status</option>
+          <option value="OPEN">Open trades</option>
+          <option value="CLOSE">Close trades</option>
+        </select>
         <div className="flex gap-2">
           {(['all', 'BUY', 'SELL'] as const).map((s) => (
             <button
