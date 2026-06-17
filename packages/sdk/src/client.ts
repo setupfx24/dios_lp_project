@@ -9,6 +9,17 @@ import {
   type TradeListQuery,
 } from '@lp/validators';
 
+/**
+ * Broker trades-list item: the canonical trade record plus the originating
+ * order's clientOrderId (DIOS sends the close leg as "<tradeId>-C", so the UI
+ * labels OPEN vs CLOSE) and the summed post-trade charges.
+ */
+const tradeListItemSchema = tradeRecordSchema.extend({
+  clientOrderId: z.string().nullable().optional(),
+  chargesTotal: z.string().optional(),
+});
+export type TradeListItem = z.infer<typeof tradeListItemSchema>;
+
 export interface SdkOptions {
   readonly baseUrl: string;
   /** Optional fetch override (Next.js server components want to inject `fetch` with caching opts). */
@@ -129,7 +140,7 @@ export class LpClient {
 
   // -------- Trades --------
   listTrades(query: Partial<TradeListQuery> = {}): Promise<{
-    items: TradeRecordDto[];
+    items: TradeListItem[];
     nextCursor: string | null;
   }> {
     const validated = tradeListQuerySchema.parse(query);
@@ -143,7 +154,7 @@ export class LpClient {
       `/api/v1/broker/trades?${search.toString()}`,
       { method: 'GET' },
       z.object({
-        items: z.array(tradeRecordSchema),
+        items: z.array(tradeListItemSchema),
         nextCursor: z.string().nullable(),
       }),
     );

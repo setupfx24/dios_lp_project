@@ -3,9 +3,19 @@ import { and, asc, desc, eq, gte, lt, lte, sql } from 'drizzle-orm';
 
 import { DRIZZLE_DB, type Db } from '../../database/connection.js';
 
+import { charges } from '../charges/schema/charge.schema.js';
+import { orders } from '../orders/schema/order.schema.js';
+
 import { trades, type NewTradeRow, type TradeRow } from './schema/trade.schema.js';
 
 import type { TradeListQuery } from '@lp/validators';
+
+/** A trade row enriched for the broker list: the originating order's
+ *  clientOrderId (used to label OPEN vs CLOSE legs) + the summed charges. */
+export interface TradeListItemRow extends TradeRow {
+  clientOrderId: string | null;
+  chargesTotal: string;
+}
 
 /**
  * APPEND-ONLY. This class intentionally exposes no `update` or `delete`.
@@ -31,7 +41,7 @@ export class TradesRepository {
     return rows[0] ?? null;
   }
 
-  async findByBroker(query: TradeListQuery & { brokerId: string }): Promise<TradeRow[]> {
+  async findByBroker(query: TradeListQuery & { brokerId: string }): Promise<TradeListItemRow[]> {
     const conditions = [eq(trades.brokerId, query.brokerId)];
     if (query.symbol) {
       conditions.push(eq(trades.symbol, query.symbol));
@@ -50,8 +60,27 @@ export class TradesRepository {
     }
 
     return this.db
-      .select()
+      .select({
+        id: trades.id,
+        tradeId: trades.tradeId,
+        orderId: trades.orderId,
+        brokerId: trades.brokerId,
+        symbol: trades.symbol,
+        side: trades.side,
+        quantity: trades.quantity,
+        price: trades.price,
+        executedAt: trades.executedAt,
+        prevHash: trades.prevHash,
+        hash: trades.hash,
+        createdAt: trades.createdAt,
+        // clientOrderId from the originating order: DIOS sends the close leg as
+        // "<tradeId>-C", so the UI labels it CLOSE; everything else is OPEN.
+        clientOrderId: orders.clientOrderId,
+        // Summed post-trade charges for this trade (0 when none yet).
+        chargesTotal: sql<string>`COALESCE((SELECT SUM(${charges.amount}) FROM ${charges} WHERE ${charges.tradeId} = ${trades.tradeId}), 0)::text`,
+      })
       .from(trades)
+      .leftJoin(orders, eq(trades.orderId, orders.orderId))
       .where(and(...conditions))
       .orderBy(desc(trades.id))
       .limit(query.limit);

@@ -14,7 +14,7 @@ import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { JwtGuard } from '../auth/jwt.guard.js';
 import { ChargesRepository } from '../charges/charges.repository.js';
 
-import { TradesRepository } from './trades.repository.js';
+import { TradesRepository, type TradeListItemRow } from './trades.repository.js';
 
 import type { TradeRow } from './schema/trade.schema.js';
 import type { ChargeRow } from '../charges/schema/charge.schema.js';
@@ -39,7 +39,7 @@ export class TradesController {
   async list(
     @CurrentUser() user: CurrentUserPayload | null,
     @Query() query: TradeListQuery,
-  ): Promise<{ items: TradeRow[]; nextCursor: string | null }> {
+  ): Promise<{ items: TradeListItemRow[]; nextCursor: string | null }> {
     if (!user) {
       throw new DomainException(ErrorCode.AUTH_FORBIDDEN, 'No user', HttpStatus.FORBIDDEN);
     }

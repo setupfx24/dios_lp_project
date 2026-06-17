@@ -1,19 +1,25 @@
 'use client';
 
 import { LogOut, Wifi } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import { useMe } from '@/features/account/hooks';
 import { lp } from '@/lib/sdk';
 
 export function Header() {
-  const router = useRouter();
   const { data } = useMe();
   const name = data?.broker.displayName ?? data?.user?.email ?? 'Broker';
 
   function logout() {
-    void lp.logout().then(() => router.push('/login'));
+    // Always land on /login even if the API call fails, and force a full reload
+    // (window.location, not router.push) so all in-memory auth state is dropped
+    // and the now-cleared cookie is re-evaluated from scratch.
+    void lp
+      .logout()
+      .catch(() => {})
+      .finally(() => {
+        window.location.href = '/login';
+      });
   }
 
   return (

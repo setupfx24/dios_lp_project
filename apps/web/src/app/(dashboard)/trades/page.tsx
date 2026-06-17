@@ -118,8 +118,10 @@ export default function TradesPage() {
                 <Th>Trade ID</Th>
                 <Th>Symbol</Th>
                 <Th>Side</Th>
+                <Th>Status</Th>
                 <Th className="text-right">Qty</Th>
                 <Th className="text-right">Price</Th>
+                <Th className="text-right">Charges</Th>
                 <Th className="text-right">Value</Th>
               </tr>
             </thead>
@@ -134,8 +136,16 @@ export default function TradesPage() {
                   <Td>
                     <Badge color={t.side === 'BUY' ? 'green' : 'red'}>{t.side}</Badge>
                   </Td>
+                  <Td>
+                    {t.clientOrderId?.endsWith('-C') ? (
+                      <Badge color="red">CLOSE</Badge>
+                    ) : (
+                      <Badge color="green">OPEN</Badge>
+                    )}
+                  </Td>
                   <Td className="text-right">{t.quantity}</Td>
                   <Td className="text-right">{t.price}</Td>
+                  <Td className="text-right">{usd(Number(t.chargesTotal ?? 0))}</Td>
                   <Td className="text-right font-medium">
                     {usd(Number(t.quantity) * Number(t.price))}
                   </Td>

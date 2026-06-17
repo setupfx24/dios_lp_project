@@ -56,7 +56,15 @@ export class AuthController {
 
   @Post('logout')
   logout(@Res({ passthrough: true }) reply: FastifyReply): { ok: true } {
-    void reply.clearCookie('lp_access', { path: '/', ...cookieDomainOpt(this.cfg) });
+    const domainOpt = cookieDomainOpt(this.cfg);
+    // Clear the domain-scoped cookie...
+    void reply.clearCookie('lp_access', { path: '/', ...domainOpt });
+    // ...AND any stale HOST-ONLY lp_access (from logins issued before
+    // COOKIE_DOMAIN was set). Without this the browser keeps sending the
+    // host-only cookie and the user stays "logged in" after clicking Logout.
+    if (domainOpt.domain) {
+      void reply.clearCookie('lp_access', { path: '/' });
+    }
     return { ok: true };
   }
 }
