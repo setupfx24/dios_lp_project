@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import * as argon2 from 'argon2';
-import { eq } from 'drizzle-orm';
+import { eq, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { ErrorCode } from '@lp/constants';
@@ -62,7 +62,56 @@ export class BrokersAdminController {
 
   @Get()
   list() {
-    return this.db.select().from(brokers);
+    // Active roster (closed/"deleted" brokers excluded) with each broker's
+    // wallet balance (CREDIT − DEBIT over its ledger entries).
+    return this.db
+      .select({
+        id: brokers.id,
+        brokerId: brokers.brokerId,
+        displayName: brokers.displayName,
+        contactEmail: brokers.contactEmail,
+        status: brokers.status,
+        createdAt: brokers.createdAt,
+        balance: sql<string>`COALESCE((
+          SELECT SUM(CASE WHEN le.direction = 'CREDIT' THEN le.amount ELSE -le.amount END)
+          FROM ledger.ledger_entries le
+          JOIN ledger.wallets w ON w.wallet_id = le.wallet_id
+          WHERE w.broker_id = ${brokers.brokerId}
+        ), 0)::text`,
+      })
+      .from(brokers)
+      .where(ne(brokers.status, 'closed'))
+      .orderBy(brokers.createdAt);
+  }
+
+  /**
+   * "Delete" a broker — soft-close (status='closed'). Append-only invariants
+   * mean a broker's trades/ledger can't be hard-deleted, so closing removes it
+   * from the active roster (and frees the single-broker slot) while preserving
+   * the audit trail.
+   */
+  @Post(':brokerId/delete')
+  @RequireAdminRole('super_admin', 'ops')
+  @AuditLog({ action: 'broker.delete', resourceType: 'broker', resourceIdParam: 'brokerId' })
+  async remove(@Param('brokerId') brokerId: string, @AdminCtx() ctx: AdminRequestContext) {
+    const tx = requireTx(ctx);
+    const before = (
+      await tx.select().from(brokers).where(eq(brokers.brokerId, brokerId)).limit(1)
+    )[0];
+    if (!before) {
+      throw new DomainException(ErrorCode.NOT_FOUND, 'Broker not found', HttpStatus.NOT_FOUND);
+    }
+    const [updated] = await tx
+      .update(brokers)
+      .set({ status: 'closed', updatedAt: new Date() })
+      .where(eq(brokers.brokerId, brokerId))
+      .returning();
+    ctx.audit = {
+      ...requireAudit(ctx),
+      beforeState: { status: before.status },
+      afterState: { status: updated?.status },
+    };
+    return { ok: true };
   }
 
   /**
@@ -87,9 +136,13 @@ export class BrokersAdminController {
   }> {
     const tx = requireTx(ctx);
 
-    // This platform supports exactly ONE broker. Reject onboarding if a broker
-    // already exists (the UI also hides the form, this is the authoritative guard).
-    const existingBroker = await tx.select({ brokerId: brokers.brokerId }).from(brokers).limit(1);
+    // This platform supports exactly ONE active broker. Reject onboarding if a
+    // non-closed broker already exists (closed/"deleted" ones free the slot).
+    const existingBroker = await tx
+      .select({ brokerId: brokers.brokerId })
+      .from(brokers)
+      .where(ne(brokers.status, 'closed'))
+      .limit(1);
     if (existingBroker[0]) {
       throw new DomainException(
         ErrorCode.CONFLICT,

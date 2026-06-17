@@ -58,6 +58,7 @@ const brokerRowSchema = z.object({
   displayName: z.string(),
   contactEmail: z.string(),
   status: z.string(),
+  balance: z.string().optional(),
   createdAt: z
     .union([z.string(), z.date()])
     .transform((v) => (v instanceof Date ? v.toISOString() : v)),
@@ -221,6 +222,14 @@ export class AdminClient {
   // -------- Brokers --------
   listBrokers() {
     return this.request('/api/v1/admin/brokers', { method: 'GET' }, z.array(brokerRowSchema));
+  }
+
+  deleteBroker(brokerId: string) {
+    return this.request(
+      `/api/v1/admin/brokers/${encodeURIComponent(brokerId)}/delete`,
+      { method: 'POST', body: JSON.stringify({}) },
+      z.object({ ok: z.literal(true) }),
+    );
   }
 
   createBroker(input: {

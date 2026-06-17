@@ -26,6 +26,7 @@ export default function BrokersPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<CreateBrokerResult | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const brokers = useQuery({ queryKey: ['brokers'], queryFn: () => adminApi.listBrokers() });
 
@@ -48,6 +49,21 @@ export default function BrokersPage() {
       setError(err instanceof Error ? err.message : 'Failed to create broker');
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function removeBroker(brokerId: string, name: string) {
+    if (!window.confirm(`Delete broker "${name}"? It will be removed from the active list.`)) {
+      return;
+    }
+    setDeletingId(brokerId);
+    try {
+      await adminApi.deleteBroker(brokerId);
+      void qc.invalidateQueries({ queryKey: ['brokers'] });
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'Failed to delete broker');
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -156,19 +172,39 @@ export default function BrokersPage() {
             <table className="w-full text-sm">
               <thead className="text-left text-muted-foreground">
                 <tr>
-                  <th className="py-2">Broker ID</th>
                   <th className="py-2">Name</th>
-                  <th className="py-2">Contact</th>
+                  <th className="py-2">Email</th>
+                  <th className="py-2 text-right">Balance</th>
                   <th className="py-2">Status</th>
+                  <th className="py-2 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {brokers.data.map((b) => (
                   <tr key={b.brokerId} className="border-t border-border">
-                    <td className="py-2 font-mono text-xs">{b.brokerId}</td>
-                    <td className="py-2">{b.displayName}</td>
+                    <td className="py-2">
+                      <div className="font-medium text-foreground">{b.displayName}</div>
+                      <div className="font-mono text-xs text-muted-foreground">{b.brokerId}</div>
+                    </td>
                     <td className="py-2">{b.contactEmail}</td>
-                    <td className="py-2">{b.status}</td>
+                    <td className="py-2 text-right">
+                      ${Number(b.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-2">
+                      <span className="rounded bg-emerald-500/15 px-2 py-0.5 text-xs text-emerald-400">
+                        {b.status}
+                      </span>
+                    </td>
+                    <td className="py-2 text-right">
+                      <Button
+                        variant="outline"
+                        disabled={deletingId === b.brokerId}
+                        onClick={() => void removeBroker(b.brokerId, b.displayName)}
+                        className="border-destructive/40 text-destructive hover:bg-destructive/10"
+                      >
+                        {deletingId === b.brokerId ? 'Deleting…' : 'Delete'}
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
