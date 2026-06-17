@@ -1,10 +1,12 @@
 'use client';
 
-import { ArrowLeftRight, Activity, LayoutDashboard, Receipt, Wallet } from 'lucide-react';
+import { Activity, ArrowLeftRight, LayoutDashboard, LogOut, Receipt, Wallet } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 
 import { cn } from '@/lib/cn';
+import { lp } from '@/lib/sdk';
 
 const NAV = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -16,6 +18,20 @@ const NAV = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  function logout() {
+    setLoggingOut(true);
+    // Always land on /login even if the API call fails, with a full reload so
+    // all in-memory auth state is dropped and the cleared cookie re-evaluated.
+    void lp
+      .logout()
+      .catch(() => {})
+      .finally(() => {
+        window.location.href = '/login';
+      });
+  }
+
   return (
     <aside className="flex h-full w-56 shrink-0 flex-col border-r border-zinc-800 bg-zinc-900 px-3 py-4">
       <div className="mb-6 flex items-center gap-2 px-2">
@@ -44,6 +60,15 @@ export function Sidebar() {
           );
         })}
       </nav>
+      <button
+        type="button"
+        onClick={logout}
+        disabled={loggingOut}
+        className="mt-auto flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-red-400 disabled:opacity-60"
+      >
+        <LogOut className="h-4 w-4 shrink-0" />
+        {loggingOut ? 'Logging out…' : 'Logout'}
+      </button>
     </aside>
   );
 }
