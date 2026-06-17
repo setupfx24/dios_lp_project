@@ -1,7 +1,7 @@
 'use client';
 
 import { Activity, BarChart3, Download, Search, TrendingUp } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { TradeRecordDto } from '@lp/sdk';
 
@@ -27,6 +27,8 @@ export default function TradesPage() {
   const [q, setQ] = useState('');
   const [side, setSide] = useState<'all' | 'BUY' | 'SELL'>('all');
   const [status, setStatus] = useState<'all' | 'OPEN' | 'CLOSE'>('all');
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const all = data?.items ?? [];
   const filtered = useMemo(() => {
@@ -43,6 +45,15 @@ export default function TradesPage() {
       return true;
     });
   }, [all, q, side, status]);
+
+  // Reset to the first page whenever the filters change the result set.
+  useEffect(() => {
+    setPage(1);
+  }, [q, side, status]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paged = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const totalVolume = all.reduce((s, t) => s + Number(t.quantity), 0);
   const notional = all.reduce((s, t) => s + Number(t.quantity) * Number(t.price), 0);
@@ -139,7 +150,7 @@ export default function TradesPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((t) => (
+              {paged.map((t) => (
                 <tr key={t.tradeId} className="border-b border-zinc-800/60 hover:bg-zinc-800/40">
                   <Td className="whitespace-nowrap text-zinc-400">
                     {formatDateTime(t.executedAt)}
@@ -168,9 +179,35 @@ export default function TradesPage() {
             </tbody>
           </DataTable>
         ))}
-      <p className="mt-3 text-xs text-zinc-500">
-        Showing {filtered.length} of {all.length} trades.
-      </p>
+      <div className="mt-3 flex flex-col items-center justify-between gap-3 sm:flex-row">
+        <p className="text-xs text-zinc-500">
+          Showing {paged.length ? (currentPage - 1) * pageSize + 1 : 0}–
+          {(currentPage - 1) * pageSize + paged.length} of {filtered.length} trades.
+        </p>
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage <= 1}
+              className="rounded-md bg-zinc-800 px-3 py-1.5 text-sm font-medium text-zinc-300 hover:text-white disabled:opacity-40"
+            >
+              Prev
+            </button>
+            <span className="text-sm text-zinc-400">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+              className="rounded-md bg-zinc-800 px-3 py-1.5 text-sm font-medium text-zinc-300 hover:text-white disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

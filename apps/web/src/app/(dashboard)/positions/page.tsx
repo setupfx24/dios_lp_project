@@ -36,6 +36,8 @@ function fmtPnl(v: string | number): string {
  */
 export default function PositionsPage() {
   const [snap, setSnap] = useState<Snapshot | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   useEffect(() => {
     const socket = getSocket();
@@ -50,6 +52,9 @@ export default function PositionsPage() {
 
   const positions = snap?.positions ?? [];
   const totalPnl = snap ? Number(snap.totalPnl) : 0;
+  const totalPages = Math.max(1, Math.ceil(positions.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paged = positions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="space-y-4">
@@ -92,7 +97,7 @@ export default function PositionsPage() {
                 </tr>
               </thead>
               <tbody>
-                {positions.map((p) => {
+                {paged.map((p) => {
                   const pnl = Number(p.floatingPnl);
                   return (
                     <tr key={p.tradeId} className="border-t border-border">
@@ -117,6 +122,31 @@ export default function PositionsPage() {
                 })}
               </tbody>
             </table>
+          )}
+          {totalPages > 1 && (
+            <div className="mt-3 flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">
+                Page {currentPage} of {totalPages} · {positions.length} open
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage <= 1}
+                  className="rounded-md bg-muted px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-40"
+                >
+                  Prev
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage >= totalPages}
+                  className="rounded-md bg-muted px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
