@@ -7,6 +7,7 @@ import { getSocket } from '@/lib/socket';
 
 interface Position {
   tradeId: string;
+  userLabel?: string | null;
   symbol: string;
   side: 'BUY' | 'SELL';
   quantity: string;
@@ -81,6 +82,7 @@ export default function PositionsPage() {
               <thead className="text-left text-muted-foreground">
                 <tr>
                   <th className="py-2">Trade ID</th>
+                  <th className="py-2">User</th>
                   <th className="py-2">Symbol</th>
                   <th className="py-2">Side</th>
                   <th className="py-2 text-right">Qty</th>
@@ -95,6 +97,7 @@ export default function PositionsPage() {
                   return (
                     <tr key={p.tradeId} className="border-t border-border">
                       <td className="py-2 font-mono text-xs">{p.tradeId}</td>
+                      <td className="py-2">{p.userLabel ?? '—'}</td>
                       <td className="py-2">{p.symbol}</td>
                       <td
                         className={`py-2 ${p.side === 'BUY' ? 'text-emerald-500' : 'text-red-500'}`}

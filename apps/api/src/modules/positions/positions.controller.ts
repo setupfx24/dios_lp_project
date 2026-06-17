@@ -30,6 +30,7 @@ const markToMarketSchema = z.object({
     .array(
       z.object({
         tradeId: z.string(),
+        userLabel: z.string().nullable().optional(),
         symbol: z.string(),
         side: z.enum(['BUY', 'SELL']),
         quantity: decimal,
