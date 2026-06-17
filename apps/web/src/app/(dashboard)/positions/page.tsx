@@ -123,7 +123,7 @@ export default function PositionsPage() {
               </tbody>
             </table>
           )}
-          {totalPages > 1 && (
+          {positions.length > 0 && (
             <div className="mt-3 flex items-center justify-between">
               <span className="text-xs text-muted-foreground">
                 Page {currentPage} of {totalPages} · {positions.length} open
