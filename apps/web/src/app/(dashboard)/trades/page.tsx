@@ -1,6 +1,6 @@
 'use client';
 
-import { Activity, BarChart3, Download, Search, TrendingUp } from 'lucide-react';
+import { Activity, BarChart3, Download, Loader2, Search, TrendingUp } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import type { TradeRecordDto } from '@lp/sdk';
@@ -122,7 +122,12 @@ export default function TradesPage() {
         </div>
       </div>
 
-      {isLoading && <p className="text-sm text-zinc-500">Loading…</p>}
+      {isLoading && (
+        <div className="flex items-center justify-center gap-2 py-16 text-zinc-400">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <span className="text-sm">Loading trades…</span>
+        </div>
+      )}
       {error && (
         <p className="text-sm text-red-400">
           Failed to load: {error instanceof Error ? error.message : 'Unknown error'}

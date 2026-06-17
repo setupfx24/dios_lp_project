@@ -1,5 +1,6 @@
 'use client';
 
+import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -77,7 +78,12 @@ export default function PositionsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {positions.length === 0 ? (
+          {snap === null ? (
+            <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span className="text-sm">Loading live positions…</span>
+            </div>
+          ) : positions.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No open positions. Live prices appear here as A-Book trades open, and the floating
               P&amp;L ticks with the market.
