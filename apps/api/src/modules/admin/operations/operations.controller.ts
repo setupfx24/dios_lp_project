@@ -91,6 +91,82 @@ export class OperationsController {
     };
   }
 
+  /** All A-Book trades across brokers (newest first) with user + charges. */
+  @Get('a-book-trades')
+  async aBookTrades(): Promise<{
+    items: {
+      tradeId: string;
+      broker: string;
+      user: string | null;
+      symbol: string;
+      side: string;
+      status: 'OPEN' | 'CLOSE';
+      quantity: string;
+      price: string;
+      charges: string;
+      executedAt: string;
+    }[];
+  }> {
+    const rows = <T>(r: unknown): T[] => (r as { rows?: T[] }).rows ?? [];
+    const raw = rows<{
+      trade_id: string;
+      broker_name: string;
+      client_user_label: string | null;
+      symbol: string;
+      side: string;
+      client_order_id: string;
+      quantity: string;
+      price: string;
+      charges: string;
+      executed_at: Date | string;
+    }>(
+      await this.db.execute(sql`
+        SELECT t.trade_id, t.symbol, t.side, t.quantity::text AS quantity, t.price::text AS price,
+               t.executed_at, o.client_order_id, o.client_user_label,
+               b.display_name AS broker_name,
+               COALESCE((SELECT SUM(amount) FROM trading.charges c WHERE c.trade_id = t.trade_id), 0)::text AS charges
+        FROM trading.trades t
+        JOIN trading.orders o ON o.order_id = t.order_id
+        JOIN auth.brokers b ON b.broker_id = t.broker_id
+        ORDER BY t.id DESC
+        LIMIT 200`),
+    );
+    return {
+      items: raw.map((r) => ({
+        tradeId: r.trade_id,
+        broker: r.broker_name,
+        user: r.client_user_label,
+        symbol: r.symbol,
+        side: r.side,
+        status: r.client_order_id.endsWith('-C') ? 'CLOSE' : 'OPEN',
+        quantity: r.quantity,
+        price: r.price,
+        charges: r.charges,
+        executedAt: r.executed_at instanceof Date ? r.executed_at.toISOString() : String(r.executed_at),
+      })),
+    };
+  }
+
+  /** Distinct traded instruments with their last traded price + trade count.
+   *  (Swistrade has no live market feed — derived from forwarded trades.) */
+  @Get('instruments')
+  async instruments(): Promise<{
+    items: { symbol: string; trades: number; lastPrice: string }[];
+  }> {
+    const rows = <T>(r: unknown): T[] => (r as { rows?: T[] }).rows ?? [];
+    const raw = rows<{ symbol: string; trades: number; last_price: string | null }>(
+      await this.db.execute(sql`
+        SELECT t.symbol, count(*)::int AS trades,
+          (SELECT price::text FROM trading.trades t2 WHERE t2.symbol = t.symbol ORDER BY t2.id DESC LIMIT 1) AS last_price
+        FROM trading.trades t
+        GROUP BY t.symbol
+        ORDER BY trades DESC`),
+    );
+    return {
+      items: raw.map((r) => ({ symbol: r.symbol, trades: r.trades, lastPrice: r.last_price ?? '0' })),
+    };
+  }
+
   @Get('metrics')
   async metrics(): Promise<{
     queueDepth: number;

@@ -319,6 +319,41 @@ export class AdminClient {
     );
   }
 
+  aBookTrades() {
+    return this.request(
+      '/api/v1/admin/operations/a-book-trades',
+      { method: 'GET' },
+      z.object({
+        items: z.array(
+          z.object({
+            tradeId: z.string(),
+            broker: z.string(),
+            user: z.string().nullable(),
+            symbol: z.string(),
+            side: z.string(),
+            status: z.string(),
+            quantity: z.string(),
+            price: z.string(),
+            charges: z.string(),
+            executedAt: z.string(),
+          }),
+        ),
+      }),
+    );
+  }
+
+  instruments() {
+    return this.request(
+      '/api/v1/admin/operations/instruments',
+      { method: 'GET' },
+      z.object({
+        items: z.array(
+          z.object({ symbol: z.string(), trades: z.number(), lastPrice: z.string() }),
+        ),
+      }),
+    );
+  }
+
   operationsMetrics() {
     return this.request(
       '/api/v1/admin/operations/metrics',
