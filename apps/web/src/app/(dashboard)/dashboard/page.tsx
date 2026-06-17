@@ -56,12 +56,6 @@ export default function DashboardPage() {
               <p className="text-xs text-zinc-500">{primary?.currency ?? 'USD'}</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-lg border border-red-900/30 bg-black/20 px-4 py-3">
-            <Info label="Name" value={me.data?.broker.displayName ?? '—'} />
-            <Info label="Email" value={me.data?.broker.contactEmail ?? '—'} />
-            <Info label="Broker ID" value={me.data?.broker.brokerId ?? '—'} mono />
-            <Info label="Status" value={me.data?.broker.status ?? '—'} />
-          </div>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             <StatCard label="Total Trades" value={items.length} accent="blue" icon={Activity} />
             <StatCard label="Open Orders" value={openOrders} accent="orange" icon={ListChecks} />
@@ -75,7 +69,7 @@ export default function DashboardPage() {
         </div>
       </Card>
 
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-3">
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label="Symbols"
           value={new Set(items.map((t) => t.symbol)).size}
@@ -89,6 +83,16 @@ export default function DashboardPage() {
           accent="green"
           icon={Activity}
         />
+        <Card>
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-400">
+            Account info
+          </p>
+          <div className="grid grid-cols-1 gap-1.5">
+            <Info label="Name" value={me.data?.broker.displayName ?? '—'} />
+            <Info label="Email" value={me.data?.broker.contactEmail ?? '—'} />
+            <Info label="Broker ID" value={me.data?.broker.brokerId ?? '—'} mono />
+          </div>
+        </Card>
       </div>
 
       <Card className="mb-6">
