@@ -3,7 +3,6 @@
 import {
   AlertOctagon,
   ClipboardList,
-  Cog,
   FileSearch,
   LayoutDashboard,
   LogOut,
@@ -22,7 +21,6 @@ import { adminApi } from '@/lib/sdk';
 
 const NAV = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/operations', label: 'Operations', icon: Cog },
   { href: '/brokers', label: 'Brokers', icon: Users },
   { href: '/interventions', label: 'Interventions', icon: Wallet },
   { href: '/approvals', label: 'Approvals', icon: ClipboardList },
@@ -33,7 +31,6 @@ const NAV = [
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const env = process.env.NEXT_PUBLIC_ENV ?? 'DEV';
   const [loggingOut, setLoggingOut] = useState(false);
 
   async function handleLogout() {
@@ -89,21 +86,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
         </button>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center justify-between border-b border-primary/40 bg-card px-6">
-          <div className="text-sm font-medium text-primary">
-            Operator console — actions are immutable
-          </div>
-          <div
-            className={cn(
-              'rounded px-3 py-1 text-xs font-bold uppercase',
-              env === 'PROD'
-                ? 'bg-destructive text-destructive-foreground'
-                : 'bg-primary/20 text-primary',
-            )}
-          >
-            {env}
-          </div>
-        </header>
         <main className="flex-1 overflow-auto bg-muted/20 p-6">{children}</main>
       </div>
     </div>
