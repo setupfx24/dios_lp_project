@@ -31,6 +31,8 @@ export const orderRequestSchema = z
     quantity: positiveDecimalString,
     price: decimalString.optional(),
     timeInForce: timeInForceSchema.default('DAY'),
+    // Optional end-user label (the upstream broker's user who placed the trade).
+    clientUserLabel: z.string().max(120).optional(),
   })
   .superRefine((data, ctx) => {
     if (data.type === 'LIMIT' || data.type === 'STOP_LIMIT') {

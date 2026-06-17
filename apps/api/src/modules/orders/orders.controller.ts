@@ -94,6 +94,7 @@ export class OrdersController {
       quantity: dto.quantity,
       price: dto.price ?? null,
       timeInForce: dto.timeInForce as 'DAY' | 'IOC' | 'FOK' | 'GTC',
+      clientUserLabel: dto.clientUserLabel ?? null,
     });
 
     await this.queue.add(

@@ -16,6 +16,7 @@ import {
  */
 const tradeListItemSchema = tradeRecordSchema.extend({
   clientOrderId: z.string().nullable().optional(),
+  clientUserLabel: z.string().nullable().optional(),
   chargesTotal: z.string().optional(),
 });
 export type TradeListItem = z.infer<typeof tradeListItemSchema>;

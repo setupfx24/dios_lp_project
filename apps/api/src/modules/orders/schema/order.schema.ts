@@ -33,6 +33,9 @@ export const orders = trading.table(
     timeInForce: timeInForceEnum('time_in_force').notNull(),
     status: orderStatusEnum('status').notNull().default('PENDING'),
     rejectionReason: text('rejection_reason'),
+    // Optional end-user label from the upstream broker (e.g. dios sends the
+    // DIOS user's name) so the broker portal can show who placed each trade.
+    clientUserLabel: text('client_user_label'),
     receivedAt: timestamp('received_at', { withTimezone: true })
       .notNull()
       .default(sql`now()`),

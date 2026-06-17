@@ -128,6 +128,7 @@ export default function TradesPage() {
               <tr>
                 <Th>Time</Th>
                 <Th>Trade ID</Th>
+                <Th>User</Th>
                 <Th>Symbol</Th>
                 <Th>Side</Th>
                 <Th>Status</Th>
@@ -144,6 +145,7 @@ export default function TradesPage() {
                     {formatDateTime(t.executedAt)}
                   </Td>
                   <Td className="font-mono text-xs">{t.tradeId}</Td>
+                  <Td>{t.clientUserLabel ?? '—'}</Td>
                   <Td>{t.symbol}</Td>
                   <Td>
                     <Badge color={t.side === 'BUY' ? 'green' : 'red'}>{t.side}</Badge>
