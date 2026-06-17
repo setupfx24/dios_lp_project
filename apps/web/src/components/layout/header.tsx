@@ -9,7 +9,7 @@ export function Header() {
   const name = data?.broker.displayName ?? data?.user?.email ?? 'Broker';
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-zinc-800 bg-zinc-900 px-6">
+    <header className="flex h-16 items-center justify-between border-b border-red-900/30 bg-red-950/40 px-6">
       <div className="text-sm text-zinc-400">
         Signed in as <span className="font-medium text-white">{name}</span>
       </div>
