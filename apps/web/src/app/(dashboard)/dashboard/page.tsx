@@ -1,6 +1,6 @@
 'use client';
 
-import { Activity, BarChart3, ListChecks, TrendingUp, Wallet as WalletIcon } from 'lucide-react';
+import { Activity, BarChart3, ListChecks, Wallet as WalletIcon } from 'lucide-react';
 
 import {
   Badge,
@@ -30,7 +30,6 @@ export default function DashboardPage() {
   const items = trades.data?.items ?? [];
   const orderItems = orders.data?.items ?? [];
   const totalVolume = items.reduce((s, t) => s + Number(t.quantity), 0);
-  const totalNotional = items.reduce((s, t) => s + Number(t.quantity) * Number(t.price), 0);
   const openOrders = orderItems.filter(
     (o) => o.status === 'PENDING' || o.status === 'ACCEPTED',
   ).length;
@@ -57,6 +56,12 @@ export default function DashboardPage() {
               <p className="text-xs text-zinc-500">{primary?.currency ?? 'USD'}</p>
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-lg border border-red-900/30 bg-black/20 px-4 py-3">
+            <Info label="Name" value={me.data?.broker.displayName ?? '—'} />
+            <Info label="Email" value={me.data?.broker.contactEmail ?? '—'} />
+            <Info label="Broker ID" value={me.data?.broker.brokerId ?? '—'} mono />
+            <Info label="Status" value={me.data?.broker.status ?? '—'} />
+          </div>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             <StatCard label="Total Trades" value={items.length} accent="blue" icon={Activity} />
             <StatCard label="Open Orders" value={openOrders} accent="orange" icon={ListChecks} />
@@ -70,23 +75,7 @@ export default function DashboardPage() {
         </div>
       </Card>
 
-      <Card className="mb-6">
-        <h3 className="mb-4 font-semibold text-white">Account information</h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Info label="Name" value={me.data?.broker.displayName ?? '—'} />
-          <Info label="Email" value={me.data?.broker.contactEmail ?? '—'} />
-          <Info label="Broker ID" value={me.data?.broker.brokerId ?? '—'} mono />
-          <Info label="Status" value={me.data?.broker.status ?? '—'} />
-        </div>
-      </Card>
-
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard
-          label="Notional Traded"
-          value={usd(totalNotional)}
-          accent="cyan"
-          icon={TrendingUp}
-        />
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatCard
           label="Symbols"
           value={new Set(items.map((t) => t.symbol)).size}
