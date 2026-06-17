@@ -1,8 +1,10 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { adminApi } from '@/lib/sdk';
 
 function usd(v: string | number): string {
@@ -12,9 +14,19 @@ function usd(v: string | number): string {
 
 export default function ABookTradesPage() {
   const q = useQuery({ queryKey: ['admin-abook-trades'], queryFn: () => adminApi.aBookTrades() });
+  const [userQ, setUserQ] = useState('');
+  const [status, setStatus] = useState<'all' | 'OPEN' | 'CLOSE'>('all');
+
   const items = q.data?.items ?? [];
   const buys = items.filter((t) => t.side === 'BUY').length;
   const volume = items.reduce((s, t) => s + Number(t.quantity), 0);
+
+  const needle = userQ.trim().toLowerCase();
+  const filtered = items.filter((t) => {
+    if (status !== 'all' && t.status !== status) return false;
+    if (needle && !(t.user ?? '').toLowerCase().includes(needle)) return false;
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -32,10 +44,27 @@ export default function ABookTradesPage() {
           <CardTitle>Forwarded trades</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+            <Input
+              value={userQ}
+              onChange={(e) => setUserQ(e.target.value)}
+              placeholder="Search by user…"
+              className="sm:max-w-xs"
+            />
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as 'all' | 'OPEN' | 'CLOSE')}
+              className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="all">All status</option>
+              <option value="OPEN">Open trades</option>
+              <option value="CLOSE">Close trades</option>
+            </select>
+          </div>
           {q.isLoading ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
-          ) : items.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No A-Book trades yet.</p>
+          ) : filtered.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No A-Book trades match your filters.</p>
           ) : (
             <table className="w-full text-sm">
               <thead className="text-left text-muted-foreground">
@@ -52,7 +81,7 @@ export default function ABookTradesPage() {
                 </tr>
               </thead>
               <tbody>
-                {items.map((t) => (
+                {filtered.map((t) => (
                   <tr key={t.tradeId} className="border-t border-border">
                     <td className="whitespace-nowrap py-2 text-muted-foreground">
                       {new Date(t.executedAt).toLocaleString()}
