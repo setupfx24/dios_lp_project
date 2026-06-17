@@ -7,6 +7,7 @@ import {
   Card,
   DataTable,
   EmptyState,
+  Loader,
   PageHeader,
   StatCard,
   Td,
@@ -106,7 +107,9 @@ export default function DashboardPage() {
           <h3 className="font-semibold text-white">Recent trades</h3>
           <span className="text-xs text-zinc-500">{recent.length} shown</span>
         </div>
-        {recent.length === 0 ? (
+        {trades.isLoading ? (
+          <Loader label="Loading trades…" />
+        ) : recent.length === 0 ? (
           <EmptyState
             icon={Activity}
             title="No trades yet"

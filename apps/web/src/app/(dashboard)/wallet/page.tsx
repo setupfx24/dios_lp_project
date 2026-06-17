@@ -2,7 +2,7 @@
 
 import { Wallet as WalletIcon } from 'lucide-react';
 
-import { Card, PageHeader } from '@/components/dash/ui';
+import { Card, Loader, PageHeader } from '@/components/dash/ui';
 import { useLedger, useWallet } from '@/features/account/hooks';
 import { LedgerTable } from '@/features/account/ledger-table';
 
@@ -45,7 +45,7 @@ export default function WalletPage() {
           <span className="text-xs text-zinc-500">{entries.length} entries</span>
         </div>
         {ledger.isLoading ? (
-          <p className="text-sm text-zinc-500">Loading…</p>
+          <Loader label="Loading transactions…" />
         ) : (
           <LedgerTable entries={entries} />
         )}

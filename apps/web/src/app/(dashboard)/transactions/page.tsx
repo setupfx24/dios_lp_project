@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { Card, PageHeader, StatCard } from '@/components/dash/ui';
+import { Card, Loader, PageHeader, StatCard } from '@/components/dash/ui';
 import { useLedger } from '@/features/account/hooks';
 import { LedgerTable } from '@/features/account/ledger-table';
 
@@ -70,7 +70,7 @@ export default function TransactionsPage() {
 
       <Card>
         {ledger.isLoading ? (
-          <p className="text-sm text-zinc-500">Loading…</p>
+          <Loader label="Loading transactions…" />
         ) : (
           <LedgerTable entries={filtered} />
         )}

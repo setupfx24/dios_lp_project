@@ -1,4 +1,4 @@
-import type { LucideIcon } from 'lucide-react';
+import { Loader2, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 /** Corecen-style dark UI primitives (zinc theme). */
@@ -7,6 +7,16 @@ export function Card({ children, className = '' }: { children: ReactNode; classN
   return (
     <div className={`rounded-lg border border-zinc-800 bg-zinc-900 p-6 ${className}`}>
       {children}
+    </div>
+  );
+}
+
+/** Centered spinner shown while data is syncing. */
+export function Loader({ label = 'Loading…' }: { label?: string }) {
+  return (
+    <div className="flex items-center justify-center gap-2 py-16 text-zinc-400">
+      <Loader2 className="h-5 w-5 animate-spin" />
+      <span className="text-sm">{label}</span>
     </div>
   );
 }
