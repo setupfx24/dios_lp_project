@@ -17,6 +17,7 @@ import { HmacModule } from './modules/hmac/hmac.module.js';
 import { LedgerModule } from './modules/ledger/ledger.module.js';
 import { MatchingModule } from './modules/matching/matching.module.js';
 import { OrdersModule } from './modules/orders/orders.module.js';
+import { PositionsModule } from './modules/positions/positions.module.js';
 import { RiskModule } from './modules/risk/risk.module.js';
 import { TradesModule } from './modules/trades/trades.module.js';
 import { WebsocketModule } from './modules/websocket/websocket.module.js';
@@ -99,6 +100,7 @@ export class AppModule {
     const brokerImports = [
       AuthModule,
       OrdersModule,
+      PositionsModule,
       TradesModule,
       WebsocketModule,
       BrokerPortalModule,

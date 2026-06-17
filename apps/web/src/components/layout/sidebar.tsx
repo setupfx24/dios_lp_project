@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeftRight, LayoutDashboard, Receipt, Wallet } from 'lucide-react';
+import { ArrowLeftRight, Activity, LayoutDashboard, Receipt, Wallet } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -10,6 +10,7 @@ const NAV = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/wallet', label: 'Wallet', icon: Wallet },
   { href: '/trades', label: 'Trades', icon: Receipt },
+  { href: '/positions', label: 'Positions', icon: Activity },
   { href: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
 ];
 
