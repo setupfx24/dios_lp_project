@@ -14,6 +14,7 @@ interface OrderRow {
   type: 'MARKET' | 'LIMIT' | 'STOP' | 'STOP_LIMIT';
   quantity: string;
   price: string | null;
+  commission_amount: string | null;
   status: string;
 }
 
@@ -60,7 +61,8 @@ export class OrderProcessor {
     const rows = (
       await this.pool.query<OrderRow>(
         `SELECT order_id, broker_id, symbol, side, type,
-                quantity::text AS quantity, price::text AS price, status
+                quantity::text AS quantity, price::text AS price,
+                commission_amount::text AS commission_amount, status
          FROM trading.orders WHERE order_id = $1`,
         [orderId],
       )
@@ -111,6 +113,18 @@ export class OrderProcessor {
           hash,
         ],
       );
+
+      // Record the upstream broker's commission as a BROKERAGE charge so it
+      // shows in the broker portal's Charges column. The trade price stays raw.
+      const commission = order.commission_amount ? new Money(order.commission_amount) : null;
+      if (commission && commission.isPositive()) {
+        await client.query(
+          `INSERT INTO trading.charges (trade_id, type, amount, description)
+           VALUES ($1, 'BROKERAGE', $2, $3)`,
+          [tradeId, commission.toString(), 'Broker commission'],
+        );
+      }
+
       await client.query('COMMIT');
       this.logger.info(
         { tradeId, orderId: order.order_id, brokerId: order.broker_id },

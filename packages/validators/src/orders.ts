@@ -33,6 +33,8 @@ export const orderRequestSchema = z
     timeInForce: timeInForceSchema.default('DAY'),
     // Optional end-user label (the upstream broker's user who placed the trade).
     clientUserLabel: z.string().max(120).optional(),
+    // Optional commission charged to the user; recorded as a BROKERAGE charge.
+    commission: decimalString.optional(),
   })
   .superRefine((data, ctx) => {
     if (data.type === 'LIMIT' || data.type === 'STOP_LIMIT') {
