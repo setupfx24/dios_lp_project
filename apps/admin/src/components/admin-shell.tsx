@@ -1,15 +1,6 @@
 'use client';
 
-import {
-  AlertOctagon,
-  ClipboardList,
-  FileSearch,
-  LayoutDashboard,
-  LogOut,
-  ShieldAlert,
-  Users,
-  Wallet,
-} from 'lucide-react';
+import { AlertOctagon, LayoutDashboard, LogOut, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -22,10 +13,6 @@ import { adminApi } from '@/lib/sdk';
 const NAV = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/brokers', label: 'Brokers', icon: Users },
-  { href: '/interventions', label: 'Interventions', icon: Wallet },
-  { href: '/approvals', label: 'Approvals', icon: ClipboardList },
-  { href: '/audit', label: 'Audit', icon: FileSearch },
-  { href: '/users', label: 'Admin users', icon: ShieldAlert },
 ];
 
 export function AdminShell({ children }: { children: ReactNode }) {
