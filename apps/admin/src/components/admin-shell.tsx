@@ -47,13 +47,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex h-screen w-screen overflow-hidden">
       <aside className="flex w-60 shrink-0 flex-col border-r-4 border-primary/40 bg-card px-3 py-4">
-        <div className="mb-2 flex items-center gap-2 px-2">
+        <div className="mb-4 flex items-center gap-2 px-2">
           <AlertOctagon className="h-5 w-5 text-primary" />
           <span className="text-lg font-semibold text-primary">LP Operator</span>
         </div>
-        <p className="mb-4 px-2 text-xs uppercase tracking-wide text-destructive">
-          Admin surface — every action audited
-        </p>
         <nav className="flex flex-col gap-1">
           {NAV.map(({ href, label, icon: Icon }) => {
             const active = pathname.startsWith(href);
