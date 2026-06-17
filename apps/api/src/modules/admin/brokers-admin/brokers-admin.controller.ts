@@ -136,21 +136,6 @@ export class BrokersAdminController {
   }> {
     const tx = requireTx(ctx);
 
-    // This platform supports exactly ONE active broker. Reject onboarding if a
-    // non-closed broker already exists (closed/"deleted" ones free the slot).
-    const existingBroker = await tx
-      .select({ brokerId: brokers.brokerId })
-      .from(brokers)
-      .where(ne(brokers.status, 'closed'))
-      .limit(1);
-    if (existingBroker[0]) {
-      throw new DomainException(
-        ErrorCode.CONFLICT,
-        'A broker already exists. Only one broker can be onboarded on this platform.',
-        HttpStatus.CONFLICT,
-      );
-    }
-
     const amount = new Money(body.initialBalance);
     if (amount.isZero() || amount.isNegative()) {
       throw new DomainException(

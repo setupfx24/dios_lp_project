@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
 import { type CreateBrokerResult } from '@lp/sdk';
@@ -12,13 +13,13 @@ import { Label } from '@/components/ui/label';
 import { adminApi } from '@/lib/sdk';
 
 /**
- * Broker onboarding (single broker) + roster. This platform supports exactly
- * ONE broker: once a broker exists the onboarding form is replaced by a notice
- * and the backend rejects any further create. Generated credentials are shown
- * ONCE and cannot be retrieved again.
+ * Broker onboarding + roster. Multiple brokers are supported: use "Create
+ * Broker" to onboard as many as needed. Generated credentials are shown ONCE
+ * and cannot be retrieved again.
  */
 export default function BrokersPage() {
   const qc = useQueryClient();
+  const [showForm, setShowForm] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [initialBalance, setInitialBalance] = useState('5000');
@@ -30,7 +31,6 @@ export default function BrokersPage() {
 
   const brokers = useQuery({ queryKey: ['brokers'], queryFn: () => adminApi.listBrokers() });
 
-  const brokerExists = (brokers.data?.length ?? 0) > 0;
   const formValid = displayName.trim().length >= 2 && contactEmail.includes('@');
 
   async function createBroker() {
@@ -44,6 +44,11 @@ export default function BrokersPage() {
         currency: currency.trim() || 'USD',
       });
       setCreated(res);
+      setShowForm(false);
+      setDisplayName('');
+      setContactEmail('');
+      setInitialBalance('5000');
+      setCurrency('USD');
       void qc.invalidateQueries({ queryKey: ['brokers'] });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create broker');
@@ -69,7 +74,13 @@ export default function BrokersPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-primary">Brokers</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold text-primary">Brokers</h1>
+        <Button onClick={() => setShowForm((s) => !s)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Create Broker
+        </Button>
+      </div>
 
       {created && (
         <Card className="border-destructive/40 bg-destructive/5">
@@ -88,16 +99,12 @@ export default function BrokersPage() {
         </Card>
       )}
 
-      {/* Onboarding form — shown only while NO broker exists (one broker max). */}
-      {!brokerExists && !created && (
+      {showForm && (
         <Card>
           <CardHeader>
             <CardTitle>Onboard broker</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              This platform supports a single broker. Once created, no further brokers can be added.
-            </p>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div className="space-y-1">
                 <Label>Display name</Label>
@@ -136,27 +143,21 @@ export default function BrokersPage() {
               </div>
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button onClick={() => void createBroker()} disabled={busy || !formValid}>
-              {busy ? 'Creating…' : 'Create broker'}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {brokerExists && !created && (
-        <Card>
-          <CardContent className="py-4">
-            <p className="text-sm text-muted-foreground">
-              A broker already exists. This platform supports only one broker, so onboarding is
-              disabled.
-            </p>
+            <div className="flex gap-2">
+              <Button onClick={() => void createBroker()} disabled={busy || !formValid}>
+                {busy ? 'Creating…' : 'Create broker'}
+              </Button>
+              <Button variant="outline" onClick={() => setShowForm(false)} disabled={busy}>
+                Cancel
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
 
       <Card>
         <CardHeader>
-          <CardTitle>Brokers</CardTitle>
+          <CardTitle>All Brokers ({brokers.data?.length ?? 0})</CardTitle>
         </CardHeader>
         <CardContent>
           {brokers.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
@@ -188,7 +189,11 @@ export default function BrokersPage() {
                     </td>
                     <td className="py-2">{b.contactEmail}</td>
                     <td className="py-2 text-right">
-                      ${Number(b.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      $
+                      {Number(b.balance ?? 0).toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </td>
                     <td className="py-2">
                       <span className="rounded bg-emerald-500/15 px-2 py-0.5 text-xs text-emerald-400">
