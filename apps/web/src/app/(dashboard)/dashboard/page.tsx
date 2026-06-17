@@ -45,6 +45,16 @@ export default function DashboardPage() {
       />
 
       <Card className="mb-6">
+        <h3 className="mb-4 font-semibold text-white">Account information</h3>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Info label="Name" value={me.data?.broker.displayName ?? '—'} />
+          <Info label="Email" value={me.data?.broker.contactEmail ?? '—'} />
+          <Info label="Broker ID" value={me.data?.broker.brokerId ?? '—'} mono />
+          <Info label="Status" value={me.data?.broker.status ?? '—'} />
+        </div>
+      </Card>
+
+      <Card className="mb-6">
         <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-500/15">
@@ -132,16 +142,6 @@ export default function DashboardPage() {
             </tbody>
           </DataTable>
         )}
-      </Card>
-
-      <Card>
-        <h3 className="mb-4 font-semibold text-white">Account information</h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Info label="Name" value={me.data?.broker.displayName ?? '—'} />
-          <Info label="Email" value={me.data?.broker.contactEmail ?? '—'} />
-          <Info label="Broker ID" value={me.data?.broker.brokerId ?? '—'} mono />
-          <Info label="Status" value={me.data?.broker.status ?? '—'} />
-        </div>
       </Card>
     </div>
   );
