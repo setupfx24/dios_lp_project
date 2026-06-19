@@ -35,7 +35,9 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     command: ['redis-server', '--appendonly', 'yes']
-    ports: ['6379:6379']
+    # NOT published to the host — internal lp-net only. Exposing Redis to the
+    # internet lets attackers REPLICAOF-hijack it into a read-only replica.
+    expose: ['6379']
     volumes:
       - redis-data:/data
     healthcheck:
