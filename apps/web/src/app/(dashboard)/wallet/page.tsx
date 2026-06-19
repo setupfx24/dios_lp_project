@@ -27,6 +27,60 @@ const STATUS_COLOR: Record<string, 'green' | 'red' | 'yellow' | 'zinc'> = {
   PENDING: 'yellow',
 };
 
+const PAGE_SIZE = 5;
+
+function paginate<T>(items: readonly T[], page: number, size: number) {
+  const totalPages = Math.max(1, Math.ceil(items.length / size));
+  const current = Math.min(page, totalPages);
+  return {
+    rows: items.slice((current - 1) * size, current * size),
+    current,
+    totalPages,
+    total: items.length,
+  };
+}
+
+function Pager({
+  current,
+  totalPages,
+  total,
+  onPrev,
+  onNext,
+}: {
+  current: number;
+  totalPages: number;
+  total: number;
+  onPrev: () => void;
+  onNext: () => void;
+}) {
+  if (total <= PAGE_SIZE) return null;
+  return (
+    <div className="mt-3 flex items-center justify-between">
+      <span className="text-xs text-zinc-500">
+        Page {current} of {totalPages} · {total} total
+      </span>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onPrev}
+          disabled={current <= 1}
+          className="rounded-md bg-zinc-800 px-3 py-1.5 text-sm font-medium text-zinc-300 hover:text-white disabled:opacity-40"
+        >
+          Prev
+        </button>
+        <button
+          type="button"
+          onClick={onNext}
+          disabled={current >= totalPages}
+          className="rounded-md bg-zinc-800 px-3 py-1.5 text-sm font-medium text-zinc-300 hover:text-white disabled:opacity-40"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function WalletPage() {
   const wallet = useWallet();
   const ledger = useLedger(200);
@@ -38,12 +92,17 @@ export default function WalletPage() {
   const [method, setMethod] = useState<DepositMethod>('card');
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [depPage, setDepPage] = useState(1);
+  const [txPage, setTxPage] = useState(1);
 
   const primary = wallet.data?.wallets[0];
   const balance = primary ? Number(primary.balance) : 0;
   const currency = primary?.currency ?? 'USD';
   const entries = ledger.data?.items ?? [];
   const requests = deposits.data?.items ?? [];
+
+  const depPaged = paginate(requests, depPage, PAGE_SIZE);
+  const txPaged = paginate(entries, txPage, PAGE_SIZE);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -192,7 +251,7 @@ export default function WalletPage() {
                 </tr>
               </thead>
               <tbody>
-                {requests.map((r) => (
+                {depPaged.rows.map((r) => (
                   <tr key={r.requestId} className="border-t border-zinc-800">
                     <td className="whitespace-nowrap py-2 text-zinc-400">
                       {new Date(r.createdAt).toLocaleString()}
@@ -213,6 +272,13 @@ export default function WalletPage() {
                 ))}
               </tbody>
             </table>
+            <Pager
+              current={depPaged.current}
+              totalPages={depPaged.totalPages}
+              total={depPaged.total}
+              onPrev={() => setDepPage((p) => Math.max(1, p - 1))}
+              onNext={() => setDepPage((p) => p + 1)}
+            />
           </div>
         )}
       </Card>
@@ -225,7 +291,16 @@ export default function WalletPage() {
         {ledger.isLoading ? (
           <Loader label="Loading transactions…" />
         ) : (
-          <LedgerTable entries={entries} />
+          <>
+            <LedgerTable entries={txPaged.rows} />
+            <Pager
+              current={txPaged.current}
+              totalPages={txPaged.totalPages}
+              total={txPaged.total}
+              onPrev={() => setTxPage((p) => Math.max(1, p - 1))}
+              onNext={() => setTxPage((p) => p + 1)}
+            />
+          </>
         )}
       </Card>
     </div>
