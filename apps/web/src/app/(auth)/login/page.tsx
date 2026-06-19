@@ -12,6 +12,28 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { lp } from '@/lib/sdk';
 
+// Fixed bubble configs (no Math.random → no SSR/CSR hydration mismatch).
+const BUBBLES = [
+  { left: 4, size: 46, dur: 19, delay: 0 },
+  { left: 11, size: 18, dur: 14, delay: 5 },
+  { left: 18, size: 30, dur: 22, delay: 2 },
+  { left: 26, size: 12, dur: 12, delay: 7 },
+  { left: 33, size: 54, dur: 25, delay: 1 },
+  { left: 41, size: 22, dur: 16, delay: 9 },
+  { left: 48, size: 14, dur: 13, delay: 4 },
+  { left: 55, size: 38, dur: 21, delay: 6 },
+  { left: 62, size: 20, dur: 15, delay: 2 },
+  { left: 69, size: 50, dur: 24, delay: 8 },
+  { left: 76, size: 16, dur: 13, delay: 3 },
+  { left: 83, size: 28, dur: 20, delay: 10 },
+  { left: 90, size: 12, dur: 11, delay: 5 },
+  { left: 96, size: 40, dur: 23, delay: 1 },
+  { left: 15, size: 16, dur: 17, delay: 11 },
+  { left: 58, size: 24, dur: 18, delay: 12 },
+  { left: 86, size: 20, dur: 15, delay: 7 },
+  { left: 38, size: 14, dur: 12, delay: 9 },
+];
+
 export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +67,19 @@ export default function LoginPage() {
         <div className="login-orb login-orb-1" />
         <div className="login-orb login-orb-2" />
         <div className="login-orb login-orb-3" />
+        {BUBBLES.map((b, i) => (
+          <span
+            key={i}
+            className="login-bubble"
+            style={{
+              left: `${b.left}%`,
+              width: `${b.size}px`,
+              height: `${b.size}px`,
+              animationDuration: `${b.dur}s`,
+              animationDelay: `${b.delay}s`,
+            }}
+          />
+        ))}
         <svg className="absolute inset-0 h-full w-full opacity-25" preserveAspectRatio="none" viewBox="0 0 1200 600" fill="none">
           <path
             className="login-line"
@@ -127,8 +162,26 @@ export default function LoginPage() {
         .login-orb-3 { width: 320px; height: 320px; background: #ef4444; top: 45%; left: 55%; animation-duration: 24s; opacity: 0.3; }
         .login-line { stroke-dasharray: 1600; animation: lpDash 12s linear infinite; }
         .login-line-2 { animation-duration: 18s; opacity: 0.7; }
+        @keyframes lpBubble {
+          0% { transform: translateY(0) scale(0.5); opacity: 0; }
+          12% { opacity: 0.6; }
+          88% { opacity: 0.4; }
+          100% { transform: translateY(-110vh) scale(1.1); opacity: 0; }
+        }
+        .login-bubble {
+          position: absolute;
+          bottom: -120px;
+          border-radius: 9999px;
+          background: rgba(239, 68, 68, 0.10);
+          border: 1px solid rgba(248, 113, 113, 0.30);
+          box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
+          animation-name: lpBubble;
+          animation-timing-function: linear;
+          animation-iteration-count: infinite;
+        }
         @media (prefers-reduced-motion: reduce) {
-          .login-orb, .login-line { animation: none; }
+          .login-orb, .login-line, .login-bubble { animation: none; }
+          .login-bubble { display: none; }
         }
       `}</style>
     </main>
