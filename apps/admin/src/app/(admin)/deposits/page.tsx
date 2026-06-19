@@ -27,7 +27,7 @@ const STATUS_STYLE: Record<string, string> = {
 
 export default function DepositsPage() {
   const qc = useQueryClient();
-  const [status, setStatus] = useState<'all' | 'PENDING' | 'APPROVED' | 'REJECTED'>('PENDING');
+  const [status, setStatus] = useState<'all' | 'PENDING' | 'APPROVED' | 'REJECTED'>('all');
   const [actingId, setActingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -90,10 +90,10 @@ export default function DepositsPage() {
               }
               className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             >
+              <option value="all">All</option>
               <option value="PENDING">Pending</option>
               <option value="APPROVED">Approved</option>
               <option value="REJECTED">Rejected</option>
-              <option value="all">All</option>
             </select>
           </div>
 
