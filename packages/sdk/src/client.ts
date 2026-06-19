@@ -174,6 +174,18 @@ export class LpClient {
     return this.request('/api/v1/broker/me', { method: 'GET' }, brokerMeSchema);
   }
 
+  getPositions(): Promise<{ positions: BrokerPosition[]; totalPnl: string; ts: string }> {
+    return this.request(
+      '/api/v1/broker/positions',
+      { method: 'GET' },
+      z.object({
+        positions: z.array(brokerPositionSchema),
+        totalPnl: z.string(),
+        ts: z.string(),
+      }),
+    );
+  }
+
   getWallet(): Promise<{ wallets: BrokerWallet[] }> {
     return this.request(
       '/api/v1/broker/wallet',
@@ -223,6 +235,18 @@ const brokerWalletSchema = z.object({
   currency: z.string(),
   balance: z.string(),
 });
+
+const brokerPositionSchema = z.object({
+  tradeId: z.string(),
+  userLabel: z.string().nullable().optional(),
+  symbol: z.string(),
+  side: z.enum(['BUY', 'SELL']),
+  quantity: z.string(),
+  openPrice: z.string(),
+  currentPrice: z.string(),
+  floatingPnl: z.string(),
+});
+export type BrokerPosition = z.infer<typeof brokerPositionSchema>;
 
 const ledgerEntrySchema = z.object({
   id: idToString,

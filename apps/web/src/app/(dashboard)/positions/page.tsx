@@ -1,28 +1,11 @@
 'use client';
 
+import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getSocket } from '@/lib/socket';
-
-interface Position {
-  tradeId: string;
-  userLabel?: string | null;
-  symbol: string;
-  side: 'BUY' | 'SELL';
-  quantity: string;
-  openPrice: string;
-  currentPrice: string;
-  floatingPnl: string;
-}
-
-interface Snapshot {
-  brokerId: string;
-  positions: Position[];
-  totalPnl: string;
-  ts: string;
-}
+import { lp } from '@/lib/sdk';
 
 function fmtPnl(v: string | number): string {
   const n = Number(v);
@@ -30,29 +13,21 @@ function fmtPnl(v: string | number): string {
 }
 
 /**
- * Live blotter of open A-Book positions. The upstream broker (dios) pushes a
- * mark-to-market snapshot every ~2s; the API rebroadcasts it on this broker's
- * websocket room as `positions.snapshot`, so current price + floating P&L tick
- * with the market in real time.
+ * Live blotter of open A-Book positions. Polls the cached mark-to-market
+ * snapshot every 2s (the upstream broker pushes it to the API). HTTP polling is
+ * resilient to websocket hiccups, so the blotter always shows current state.
  */
 export default function PositionsPage() {
-  const [snap, setSnap] = useState<Snapshot | null>(null);
+  const q = useQuery({
+    queryKey: ['positions'],
+    queryFn: () => lp.getPositions(),
+    refetchInterval: 2000,
+  });
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
-  useEffect(() => {
-    const socket = getSocket();
-    function onSnapshot(evt: Snapshot) {
-      setSnap(evt);
-    }
-    socket.on('positions.snapshot', onSnapshot);
-    return () => {
-      socket.off('positions.snapshot', onSnapshot);
-    };
-  }, []);
-
-  const positions = snap?.positions ?? [];
-  const totalPnl = snap ? Number(snap.totalPnl) : 0;
+  const positions = q.data?.positions ?? [];
+  const totalPnl = q.data ? Number(q.data.totalPnl) : 0;
   const totalPages = Math.max(1, Math.ceil(positions.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const paged = positions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -62,9 +37,7 @@ export default function PositionsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Open Positions</h1>
         <span className="text-sm text-muted-foreground">
-          {snap
-            ? `Live · updated ${new Date(snap.ts).toLocaleTimeString()}`
-            : 'Waiting for live feed…'}
+          {q.data ? `Live · updated ${new Date(q.data.ts).toLocaleTimeString()}` : 'Connecting…'}
         </span>
       </div>
 
@@ -78,7 +51,7 @@ export default function PositionsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {snap === null ? (
+          {q.isLoading ? (
             <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin" />
               <span className="text-sm">Loading live positions…</span>
@@ -89,70 +62,72 @@ export default function PositionsPage() {
               P&amp;L ticks with the market.
             </p>
           ) : (
-            <table className="w-full text-sm">
-              <thead className="text-left text-muted-foreground">
-                <tr>
-                  <th className="py-2">Trade ID</th>
-                  <th className="py-2">User</th>
-                  <th className="py-2">Symbol</th>
-                  <th className="py-2">Side</th>
-                  <th className="py-2 text-right">Qty</th>
-                  <th className="py-2 text-right">Open</th>
-                  <th className="py-2 text-right">Current</th>
-                  <th className="py-2 text-right">Floating P&amp;L</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paged.map((p) => {
-                  const pnl = Number(p.floatingPnl);
-                  return (
-                    <tr key={p.tradeId} className="border-t border-border">
-                      <td className="py-2 font-mono text-xs">{p.tradeId}</td>
-                      <td className="py-2">{p.userLabel ?? '—'}</td>
-                      <td className="py-2">{p.symbol}</td>
-                      <td
-                        className={`py-2 ${p.side === 'BUY' ? 'text-emerald-500' : 'text-red-500'}`}
-                      >
-                        {p.side}
-                      </td>
-                      <td className="py-2 text-right">{p.quantity}</td>
-                      <td className="py-2 text-right">{p.openPrice}</td>
-                      <td className="py-2 text-right font-medium">{p.currentPrice}</td>
-                      <td
-                        className={`py-2 text-right font-medium ${pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}
-                      >
-                        {fmtPnl(p.floatingPnl)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-          {positions.length > 0 && (
-            <div className="mt-3 flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">
-                Page {currentPage} of {totalPages} · {positions.length} open
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage <= 1}
-                  className="rounded-md bg-muted px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-40"
-                >
-                  Prev
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage >= totalPages}
-                  className="rounded-md bg-muted px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-40"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
+            <>
+              <table className="w-full text-sm">
+                <thead className="text-left text-muted-foreground">
+                  <tr>
+                    <th className="py-2">Trade ID</th>
+                    <th className="py-2">User</th>
+                    <th className="py-2">Symbol</th>
+                    <th className="py-2">Side</th>
+                    <th className="py-2 text-right">Qty</th>
+                    <th className="py-2 text-right">Open</th>
+                    <th className="py-2 text-right">Current</th>
+                    <th className="py-2 text-right">Floating P&amp;L</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paged.map((p) => {
+                    const pnl = Number(p.floatingPnl);
+                    return (
+                      <tr key={p.tradeId} className="border-t border-border">
+                        <td className="py-2 font-mono text-xs">{p.tradeId}</td>
+                        <td className="py-2">{p.userLabel ?? '—'}</td>
+                        <td className="py-2">{p.symbol}</td>
+                        <td
+                          className={`py-2 ${p.side === 'BUY' ? 'text-emerald-500' : 'text-red-500'}`}
+                        >
+                          {p.side}
+                        </td>
+                        <td className="py-2 text-right">{p.quantity}</td>
+                        <td className="py-2 text-right">{p.openPrice}</td>
+                        <td className="py-2 text-right font-medium">{p.currentPrice}</td>
+                        <td
+                          className={`py-2 text-right font-medium ${pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}
+                        >
+                          {fmtPnl(p.floatingPnl)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {positions.length > 0 && (
+                <div className="mt-3 flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    Page {currentPage} of {totalPages} · {positions.length} open
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage <= 1}
+                      className="rounded-md bg-muted px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-40"
+                    >
+                      Prev
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentPage >= totalPages}
+                      className="rounded-md bg-muted px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-40"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

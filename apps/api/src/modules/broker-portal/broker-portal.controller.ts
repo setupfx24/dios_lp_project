@@ -1,5 +1,6 @@
-import { Controller, Get, HttpStatus, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Inject, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Redis } from 'ioredis';
 
 import { ErrorCode } from '@lp/constants';
 
@@ -8,6 +9,7 @@ import {
   type CurrentUserPayload,
 } from '../../common/decorators/current-user.decorator.js';
 import { DomainException } from '../../common/exceptions/domain.exception.js';
+import { REDIS_CLIENT } from '../../infrastructure/redis.module.js';
 import { JwtGuard } from '../auth/jwt.guard.js';
 import { BrokersRepository } from '../brokers/brokers.repository.js';
 import { LedgerRepository } from '../ledger/ledger.repository.js';
@@ -29,7 +31,40 @@ export class BrokerPortalController {
     private readonly brokers: BrokersRepository,
     private readonly ledger: LedgerRepository,
     private readonly orders: OrdersRepository,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
+
+  /**
+   * Latest mark-to-market snapshot of open positions (cached in Redis by the
+   * upstream broker's push, 30s TTL). HTTP-pollable fallback for the live
+   * blotter so it works even when the websocket can't connect.
+   */
+  @Get('positions')
+  async positions(
+    @CurrentUser() user: CurrentUserPayload | null,
+    @Query('brokerId') requested?: string,
+  ): Promise<{ positions: unknown[]; totalPnl: string; ts: string }> {
+    const brokerId = this.scope(user, requested);
+    const empty = { positions: [], totalPnl: '0', ts: new Date().toISOString() };
+    const raw = await this.redis.get(`positions:${brokerId}`).catch(() => null);
+    if (!raw) {
+      return empty;
+    }
+    try {
+      const snap = JSON.parse(raw) as {
+        positions?: unknown[];
+        totalPnl?: string;
+        ts?: string;
+      };
+      return {
+        positions: snap.positions ?? [],
+        totalPnl: snap.totalPnl ?? '0',
+        ts: snap.ts ?? empty.ts,
+      };
+    } catch {
+      return empty;
+    }
+  }
 
   @Get('me')
   async me(@CurrentUser() user: CurrentUserPayload | null) {
