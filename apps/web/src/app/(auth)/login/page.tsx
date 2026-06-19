@@ -39,121 +39,98 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen bg-gradient-to-br from-red-950 via-zinc-950 to-black text-white">
-      {/* Brand / illustration panel */}
-      <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden p-12 lg:flex">
-        <div className="pointer-events-none absolute -right-24 top-1/4 h-96 w-96 rounded-full bg-red-600/20 blur-3xl" />
-        <div className="pointer-events-none absolute -left-16 bottom-0 h-72 w-72 rounded-full bg-red-500/10 blur-3xl" />
-
-        <div className="relative flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-600 text-sm font-bold text-white">
-            LP
-          </div>
-          <span className="text-xl font-semibold">Broker Console</span>
-        </div>
-
-        <div className="relative flex flex-1 items-center justify-center">
-          <Illustration />
-        </div>
-
-        <div className="relative">
-          <h2 className="text-3xl font-bold leading-tight">Liquidity, in real time.</h2>
-          <p className="mt-3 max-w-md text-zinc-400">
-            Monitor your A-Book flow, live positions and settlements — all in one console.
-          </p>
-        </div>
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-red-950 via-zinc-950 to-black p-6 text-white">
+      {/* Animated ambient background */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="login-orb login-orb-1" />
+        <div className="login-orb login-orb-2" />
+        <div className="login-orb login-orb-3" />
+        <svg className="absolute inset-0 h-full w-full opacity-25" preserveAspectRatio="none" viewBox="0 0 1200 600" fill="none">
+          <path
+            className="login-line"
+            d="M0,420 C150,380 250,460 400,330 C550,200 700,300 850,210 C1000,120 1100,250 1200,140"
+            stroke="#ef4444"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+          <path
+            className="login-line login-line-2"
+            d="M0,500 C160,470 260,520 420,420 C580,320 720,400 880,330 C1040,260 1120,360 1200,300"
+            stroke="#f87171"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </svg>
       </div>
 
-      {/* Form panel */}
-      <div className="flex w-full items-center justify-center p-6 lg:w-1/2">
-        <div className="w-full max-w-md rounded-2xl border border-white/10 bg-black/40 p-8 shadow-2xl backdrop-blur-xl">
-          <div className="mb-6 flex items-center gap-2 lg:hidden">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-600 text-xs font-bold text-white">
-              LP
-            </div>
-            <span className="text-lg font-semibold">Broker Console</span>
+      {/* Brand */}
+      <div className="absolute left-8 top-7 flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-600 text-sm font-bold text-white">
+          LP
+        </div>
+        <span className="text-xl font-semibold">Broker Console</span>
+      </div>
+
+      {/* Centered card */}
+      <div className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 bg-black/40 p-8 shadow-2xl backdrop-blur-xl">
+        <h1 className="text-2xl font-semibold">Sign in</h1>
+        <p className="mb-6 mt-1 text-sm text-zinc-400">Welcome back to the broker console.</p>
+
+        <form
+          className="space-y-4"
+          // eslint-disable-next-line @typescript-eslint/no-misused-promises
+          onSubmit={handleSubmit(onSubmit)}
+        >
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" type="email" autoComplete="username" {...register('email')} />
+            {errors.email && <p className="text-sm text-red-400">{errors.email.message}</p>}
           </div>
-
-          <h1 className="text-2xl font-semibold">Sign in</h1>
-          <p className="mb-6 mt-1 text-sm text-zinc-400">Welcome back to the broker console.</p>
-
-          <form
-            className="space-y-4"
-            // eslint-disable-next-line @typescript-eslint/no-misused-promises
-            onSubmit={handleSubmit(onSubmit)}
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              {...register('password')}
+            />
+            {errors.password && <p className="text-sm text-red-400">{errors.password.message}</p>}
+          </div>
+          {error && <p className="text-sm text-red-400">{error}</p>}
+          <Button
+            type="submit"
+            disabled={busy}
+            className="w-full bg-red-600 text-white hover:bg-red-700"
           >
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" autoComplete="username" {...register('email')} />
-              {errors.email && <p className="text-sm text-red-400">{errors.email.message}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                {...register('password')}
-              />
-              {errors.password && <p className="text-sm text-red-400">{errors.password.message}</p>}
-            </div>
-            {error && <p className="text-sm text-red-400">{error}</p>}
-            <Button
-              type="submit"
-              disabled={busy}
-              className="w-full bg-red-600 text-white hover:bg-red-700"
-            >
-              {busy ? 'Signing in…' : 'Sign in'}
-            </Button>
-          </form>
-        </div>
+            {busy ? 'Signing in…' : 'Sign in'}
+          </Button>
+        </form>
       </div>
+
+      <style>{`
+        @keyframes lpFloat {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(40px, -30px) scale(1.12); }
+        }
+        @keyframes lpDash {
+          to { stroke-dashoffset: -1600; }
+        }
+        .login-orb {
+          position: absolute;
+          border-radius: 9999px;
+          filter: blur(90px);
+          opacity: 0.45;
+          animation: lpFloat 16s ease-in-out infinite;
+        }
+        .login-orb-1 { width: 460px; height: 460px; background: #dc2626; top: -120px; left: -80px; }
+        .login-orb-2 { width: 380px; height: 380px; background: #7f1d1d; bottom: -120px; right: -60px; animation-duration: 20s; animation-direction: reverse; }
+        .login-orb-3 { width: 320px; height: 320px; background: #ef4444; top: 45%; left: 55%; animation-duration: 24s; opacity: 0.3; }
+        .login-line { stroke-dasharray: 1600; animation: lpDash 12s linear infinite; }
+        .login-line-2 { animation-duration: 18s; opacity: 0.7; }
+        @media (prefers-reduced-motion: reduce) {
+          .login-orb, .login-line { animation: none; }
+        }
+      `}</style>
     </main>
-  );
-}
-
-/** Decorative finance chart (area + candlesticks) — no external asset. */
-function Illustration() {
-  return (
-    <svg viewBox="0 0 420 260" className="h-64 w-full max-w-lg" fill="none">
-      <defs>
-        <linearGradient id="lpArea" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#ef4444" stopOpacity="0.35" />
-          <stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-
-      {/* subtle gridlines */}
-      {[60, 110, 160, 210].map((y) => (
-        <line key={y} x1="0" y1={y} x2="420" y2={y} stroke="#ffffff" strokeOpacity="0.05" />
-      ))}
-
-      {/* area + trend line */}
-      <path
-        d="M0,190 C50,170 80,200 120,150 C160,100 200,135 240,95 C290,55 330,110 420,40 L420,260 L0,260 Z"
-        fill="url(#lpArea)"
-      />
-      <path
-        d="M0,190 C50,170 80,200 120,150 C160,100 200,135 240,95 C290,55 330,110 420,40"
-        stroke="#ef4444"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-      <circle cx="420" cy="40" r="5" fill="#ef4444" />
-
-      {/* candlesticks */}
-      {[
-        { x: 60, t: 150, b: 215, ot: 165, ob: 200, up: false },
-        { x: 130, t: 120, b: 195, ot: 135, ob: 175, up: true },
-        { x: 200, t: 95, b: 170, ot: 110, ob: 150, up: true },
-        { x: 270, t: 70, b: 150, ot: 85, ob: 125, up: false },
-        { x: 340, t: 45, b: 130, ot: 60, ob: 105, up: true },
-      ].map((c) => (
-        <g key={c.x} stroke={c.up ? '#34d399' : '#f87171'} fill={c.up ? '#34d399' : '#f87171'}>
-          <line x1={c.x} y1={c.t} x2={c.x} y2={c.b} strokeWidth="2" />
-          <rect x={c.x - 6} y={c.ot} width="12" height={c.ob - c.ot} rx="1.5" opacity="0.9" />
-        </g>
-      ))}
-    </svg>
   );
 }
