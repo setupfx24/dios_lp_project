@@ -234,6 +234,15 @@ export class LpClient {
       z.object({ items: z.array(depositRequestSchema) }),
     );
   }
+
+  // -------- Commissions --------
+  listCommissions(): Promise<{ total: string; items: CommissionDto[] }> {
+    return this.request(
+      '/api/v1/broker/commissions',
+      { method: 'GET' },
+      z.object({ total: z.string(), items: z.array(commissionSchema) }),
+    );
+  }
 }
 
 // Over the wire these arrive as strings already (bigint via the API's
@@ -315,6 +324,17 @@ const depositRequestSchema = z.object({
   decidedAt: dateToIso.nullable(),
 });
 export type DepositRequestDto = z.infer<typeof depositRequestSchema>;
+
+const commissionSchema = z.object({
+  amount: z.string(),
+  description: z.string(),
+  createdAt: dateToIso,
+  tradeId: z.string(),
+  symbol: z.string(),
+  side: z.string(),
+  quantity: z.string(),
+});
+export type CommissionDto = z.infer<typeof commissionSchema>;
 
 export type BrokerMe = z.infer<typeof brokerMeSchema>;
 export type BrokerWallet = z.infer<typeof brokerWalletSchema>;

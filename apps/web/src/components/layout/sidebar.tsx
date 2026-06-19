@@ -1,6 +1,14 @@
 'use client';
 
-import { Activity, ArrowLeftRight, LayoutDashboard, LogOut, Receipt, Wallet } from 'lucide-react';
+import {
+  Activity,
+  ArrowLeftRight,
+  LayoutDashboard,
+  LogOut,
+  Percent,
+  Receipt,
+  Wallet,
+} from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
@@ -14,6 +22,7 @@ const NAV = [
   { href: '/trades', label: 'Trades', icon: Receipt },
   { href: '/positions', label: 'Positions', icon: Activity },
   { href: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
+  { href: '/charges', label: 'Commissions', icon: Percent },
 ];
 
 export function Sidebar() {

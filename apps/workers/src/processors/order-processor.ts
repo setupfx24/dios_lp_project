@@ -8,6 +8,7 @@ import type pg from 'pg';
 
 interface OrderRow {
   order_id: string;
+  client_order_id: string | null;
   broker_id: string;
   symbol: string;
   side: 'BUY' | 'SELL';
@@ -24,6 +25,14 @@ export interface OrderJobData {
 }
 
 const REFERENCE_PRICE_FALLBACK = '100';
+
+/**
+ * Swistrade commission: a flat fee per STANDARD LOT charged on every A-Book
+ * position the broker opens (e.g. 0.01 lot => 0.04 at $4/lot). It is debited
+ * straight from the broker wallet and recorded as a BROKERAGE charge. Close
+ * legs are not charged. Override with COMMISSION_PER_LOT.
+ */
+const COMMISSION_PER_LOT = process.env.COMMISSION_PER_LOT ?? '4';
 
 export class OrderProcessor {
   constructor(
@@ -60,7 +69,7 @@ export class OrderProcessor {
   private async loadOrder(orderId: string): Promise<OrderRow | null> {
     const rows = (
       await this.pool.query<OrderRow>(
-        `SELECT order_id, broker_id, symbol, side, type,
+        `SELECT order_id, client_order_id, broker_id, symbol, side, type,
                 quantity::text AS quantity, price::text AS price,
                 commission_amount::text AS commission_amount, status
          FROM trading.orders WHERE order_id = $1`,
@@ -114,14 +123,48 @@ export class OrderProcessor {
         ],
       );
 
-      // Record the upstream broker's commission as a BROKERAGE charge so it
-      // shows in the broker portal's Charges column. The trade price stays raw.
-      const commission = order.commission_amount ? new Money(order.commission_amount) : null;
-      if (commission && commission.isPositive()) {
+      // Swistrade commission: flat per-standard-lot fee on every position the
+      // broker OPENS (close legs, clientOrderId "<tradeId>-C", are not charged).
+      // Recorded as a BROKERAGE charge AND debited from the broker wallet so the
+      // balance reflects the fee. The trade price itself stays raw.
+      const isClose = (order.client_order_id ?? '').endsWith('-C');
+      const commission = new Money(COMMISSION_PER_LOT).mul(canonical.quantity);
+      if (!isClose && commission.isPositive()) {
         await client.query(
           `INSERT INTO trading.charges (trade_id, type, amount, description)
            VALUES ($1, 'BROKERAGE', $2, $3)`,
-          [tradeId, commission.toString(), 'Broker commission'],
+          [
+            tradeId,
+            commission.toString(),
+            `Commission ${COMMISSION_PER_LOT}/lot x ${canonical.quantity} lot`,
+          ],
+        );
+
+        const walletRes = await client.query<{ wallet_id: string; currency: string }>(
+          `SELECT wallet_id, currency FROM ledger.wallets WHERE broker_id = $1 ORDER BY id LIMIT 1`,
+          [order.broker_id],
+        );
+        let walletId = walletRes.rows[0]?.wallet_id;
+        const currency = walletRes.rows[0]?.currency ?? 'USD';
+        if (!walletId) {
+          walletId = ulid();
+          await client.query(
+            `INSERT INTO ledger.wallets (wallet_id, broker_id, currency) VALUES ($1, $2, $3)`,
+            [walletId, order.broker_id, currency],
+          );
+        }
+        await client.query(
+          `INSERT INTO ledger.ledger_entries
+             (entry_id, wallet_id, direction, amount, currency, reference_type, reference_id, description)
+           VALUES ($1, $2, 'DEBIT'::ledger_direction, $3, $4, 'CHARGE'::ledger_reference_type, $5, $6)`,
+          [
+            ulid(),
+            walletId,
+            commission.toString(),
+            currency,
+            tradeId,
+            `Commission on ${order.symbol} ${canonical.quantity} lot`,
+          ],
         );
       }
 

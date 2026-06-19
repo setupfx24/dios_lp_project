@@ -134,6 +134,57 @@ export class BrokerPortalController {
   }
 
   /**
+   * Commission (brokerage) history — the per-lot fee charged on each A-Book
+   * position the broker opened, with the originating trade context + grand
+   * total. Pagination is done client-side.
+   */
+  @Get('commissions')
+  async commissions(
+    @CurrentUser() user: CurrentUserPayload | null,
+    @Query('brokerId') requested?: string,
+  ) {
+    const brokerId = this.scope(user, requested);
+    const raw = BrokerPortalController.rows<{
+      amount: string;
+      description: string;
+      created_at: Date | string;
+      trade_id: string;
+      symbol: string;
+      side: string;
+      quantity: string;
+    }>(
+      await this.db.execute(sql`
+        SELECT c.amount::text AS amount, c.description, c.created_at,
+               t.trade_id, t.symbol, t.side, t.quantity::text AS quantity
+        FROM trading.charges c
+        JOIN trading.trades t ON t.trade_id = c.trade_id
+        WHERE t.broker_id = ${brokerId} AND c.type = 'BROKERAGE'
+        ORDER BY c.id DESC
+        LIMIT 500`),
+    );
+    const totalRow = BrokerPortalController.rows<{ total: string }>(
+      await this.db.execute(sql`
+        SELECT COALESCE(SUM(c.amount), 0)::text AS total
+        FROM trading.charges c
+        JOIN trading.trades t ON t.trade_id = c.trade_id
+        WHERE t.broker_id = ${brokerId} AND c.type = 'BROKERAGE'`),
+    );
+    return {
+      total: totalRow[0]?.total ?? '0',
+      items: raw.map((r) => ({
+        amount: r.amount,
+        description: r.description,
+        createdAt:
+          r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at),
+        tradeId: r.trade_id,
+        symbol: r.symbol,
+        side: r.side,
+        quantity: r.quantity,
+      })),
+    };
+  }
+
+  /**
    * Latest mark-to-market snapshot of open positions (cached in Redis by the
    * upstream broker's push, 30s TTL). HTTP-pollable fallback for the live
    * blotter so it works even when the websocket can't connect.

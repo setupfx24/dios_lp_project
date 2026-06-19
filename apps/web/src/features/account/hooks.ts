@@ -29,6 +29,10 @@ export function useDepositRequests() {
   });
 }
 
+export function useCommissions() {
+  return useQuery({ queryKey: ['commissions'], queryFn: () => lp.listCommissions() });
+}
+
 export function useCreateDepositRequest() {
   const qc = useQueryClient();
   return useMutation({
