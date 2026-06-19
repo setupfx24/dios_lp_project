@@ -51,6 +51,48 @@ function LoginForm() {
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="admin-grid" />
         <div className="admin-glow" />
+        {/* Faded "liquidity network" illustration */}
+        <svg
+          className="admin-net absolute inset-0 h-full w-full"
+          viewBox="0 0 1200 800"
+          fill="none"
+          preserveAspectRatio="xMidYMid slice"
+        >
+          <g stroke="#f87171" strokeOpacity="0.45" strokeWidth="1">
+            <line x1="150" y1="190" x2="350" y2="120" />
+            <line x1="350" y1="120" x2="540" y2="250" />
+            <line x1="540" y1="250" x2="320" y2="410" />
+            <line x1="320" y1="410" x2="150" y2="190" />
+            <line x1="540" y1="250" x2="690" y2="160" />
+            <line x1="690" y1="160" x2="850" y2="300" />
+            <line x1="850" y1="300" x2="1000" y2="190" />
+            <line x1="850" y1="300" x2="720" y2="470" />
+            <line x1="720" y1="470" x2="500" y2="560" />
+            <line x1="500" y1="560" x2="320" y2="410" />
+            <line x1="720" y1="470" x2="930" y2="570" />
+            <line x1="930" y1="570" x2="1080" y2="430" />
+            <line x1="1080" y1="430" x2="1000" y2="190" />
+            <line x1="500" y1="560" x2="220" y2="620" />
+          </g>
+          <g fill="#ef4444">
+            {[
+              [150, 190],
+              [350, 120],
+              [540, 250],
+              [320, 410],
+              [690, 160],
+              [850, 300],
+              [1000, 190],
+              [720, 470],
+              [500, 560],
+              [930, 570],
+              [1080, 430],
+              [220, 620],
+            ].map(([cx, cy], i) => (
+              <circle key={i} cx={cx} cy={cy} r={i % 3 === 0 ? 5 : 3} className="admin-node" />
+            ))}
+          </g>
+        </svg>
         <div className="admin-ring" style={{ animationDelay: '0s' }} />
         <div className="admin-ring" style={{ animationDelay: '1.3s' }} />
         <div className="admin-ring" style={{ animationDelay: '2.6s' }} />
@@ -143,8 +185,12 @@ function LoginForm() {
           transform: translate(-50%, -50%);
           animation: adminPing 5.2s ease-out infinite;
         }
+        @keyframes adminNetDrift { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+        @keyframes adminNode { 0%,100% { opacity: 0.45; } 50% { opacity: 1; } }
+        .admin-net { opacity: 0.18; animation: adminNetDrift 16s ease-in-out infinite; }
+        .admin-node { animation: adminNode 3.5s ease-in-out infinite; }
         @media (prefers-reduced-motion: reduce) {
-          .admin-grid, .admin-glow, .admin-ring { animation: none; }
+          .admin-grid, .admin-glow, .admin-ring, .admin-net, .admin-node { animation: none; }
           .admin-ring { display: none; }
         }
       `}</style>
