@@ -212,6 +212,28 @@ export class LpClient {
       z.object({ items: z.array(orderSchema) }),
     );
   }
+
+  // -------- Deposit requests (wallet funding) --------
+  createDepositRequest(input: {
+    amount: string;
+    method?: DepositMethod;
+    reference?: string;
+    note?: string;
+  }): Promise<DepositRequestDto> {
+    return this.request(
+      '/api/v1/broker/wallet/deposit-requests',
+      { method: 'POST', body: JSON.stringify(input) },
+      depositRequestSchema,
+    );
+  }
+
+  listDepositRequests(): Promise<{ items: DepositRequestDto[] }> {
+    return this.request(
+      '/api/v1/broker/wallet/deposit-requests',
+      { method: 'GET' },
+      z.object({ items: z.array(depositRequestSchema) }),
+    );
+  }
 }
 
 // Over the wire these arrive as strings already (bigint via the API's
@@ -277,6 +299,22 @@ const orderSchema = z.object({
   receivedAt: dateToIso,
   updatedAt: dateToIso,
 });
+
+export const DEPOSIT_METHODS = ['card', 'bank', 'upi', 'crypto', 'manual'] as const;
+export type DepositMethod = (typeof DEPOSIT_METHODS)[number];
+
+const depositRequestSchema = z.object({
+  requestId: z.string(),
+  amount: z.string(),
+  currency: z.string(),
+  method: z.string(),
+  reference: z.string().nullable(),
+  note: z.string().nullable(),
+  status: z.string(),
+  createdAt: dateToIso,
+  decidedAt: dateToIso.nullable(),
+});
+export type DepositRequestDto = z.infer<typeof depositRequestSchema>;
 
 export type BrokerMe = z.infer<typeof brokerMeSchema>;
 export type BrokerWallet = z.infer<typeof brokerWalletSchema>;

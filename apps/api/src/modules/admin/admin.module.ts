@@ -14,6 +14,7 @@ import { AdminAuthController } from './auth/admin-auth.controller.js';
 import { AdminAuthRepository } from './auth/admin-auth.repository.js';
 import { AdminAuthService } from './auth/admin-auth.service.js';
 import { BrokersAdminController } from './brokers-admin/brokers-admin.controller.js';
+import { DepositsAdminController } from './deposits/deposits-admin.controller.js';
 import { AdminJwtGuard } from './common/admin-jwt.guard.js';
 import { AdminRoleGuard } from './common/admin-role.guard.js';
 import { AuditLogInterceptor } from './common/audit-log.interceptor.js';
@@ -46,6 +47,7 @@ import { OperationsController } from './operations/operations.controller.js';
     AuditQueryController,
     OperationsController,
     BrokersAdminController,
+    DepositsAdminController,
     AdminUsersController,
   ],
   providers: [

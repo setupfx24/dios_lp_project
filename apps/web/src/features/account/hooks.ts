@@ -1,6 +1,8 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+
+import type { DepositMethod } from '@lp/sdk';
 
 import { lp } from '@/lib/sdk';
 
@@ -18,4 +20,22 @@ export function useLedger(limit = 100) {
 
 export function useOrders(query: { status?: string; limit?: number } = {}) {
   return useQuery({ queryKey: ['orders', query], queryFn: () => lp.listOrders(query) });
+}
+
+export function useDepositRequests() {
+  return useQuery({
+    queryKey: ['deposit-requests'],
+    queryFn: () => lp.listDepositRequests(),
+  });
+}
+
+export function useCreateDepositRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { amount: string; method: DepositMethod; reference?: string; note?: string }) =>
+      lp.createDepositRequest(input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['deposit-requests'] });
+    },
+  });
 }

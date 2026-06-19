@@ -75,6 +75,22 @@ const createBrokerResponse = z.object({
 
 export type CreateBrokerResult = z.infer<typeof createBrokerResponse>;
 
+const adminDepositSchema = z.object({
+  requestId: z.string(),
+  brokerId: z.string(),
+  broker: z.string(),
+  amount: z.string(),
+  currency: z.string(),
+  method: z.string(),
+  reference: z.string().nullable(),
+  note: z.string().nullable(),
+  status: z.string(),
+  decidedBy: z.string().nullable(),
+  createdAt: z.string(),
+  decidedAt: z.string().nullable(),
+});
+export type AdminDepositRequest = z.infer<typeof adminDepositSchema>;
+
 /**
  * Admin-side typed fetch client. Separate from `LpClient` because:
  *   - different cookie name (`lp_admin_access`)
@@ -360,6 +376,32 @@ export class AdminClient {
           z.object({ symbol: z.string(), trades: z.number(), lastPrice: z.string() }),
         ),
       }),
+    );
+  }
+
+  // -------- Deposit requests --------
+  listDepositRequests(status?: string) {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : '';
+    return this.request(
+      `/api/v1/admin/deposits${qs}`,
+      { method: 'GET' },
+      z.object({ items: z.array(adminDepositSchema) }),
+    );
+  }
+
+  approveDeposit(requestId: string) {
+    return this.request(
+      `/api/v1/admin/deposits/${encodeURIComponent(requestId)}/approve`,
+      { method: 'POST', body: JSON.stringify({}) },
+      z.object({ ok: z.literal(true), status: z.string() }),
+    );
+  }
+
+  rejectDeposit(requestId: string) {
+    return this.request(
+      `/api/v1/admin/deposits/${encodeURIComponent(requestId)}/reject`,
+      { method: 'POST', body: JSON.stringify({}) },
+      z.object({ ok: z.literal(true), status: z.string() }),
     );
   }
 
