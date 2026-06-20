@@ -3,7 +3,7 @@
 import { Activity, BarChart3, Download, FileText, Loader2, Search, TrendingUp } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
-import type { TradeRecordDto } from '@lp/sdk';
+import type { TradeListItem, TradeRecordDto } from '@lp/sdk';
 
 import {
   Badge,
@@ -303,7 +303,7 @@ function PdfButton({
   from,
   to,
 }: {
-  trades: readonly TradeRecordDto[];
+  trades: readonly TradeListItem[];
   from: string;
   to: string;
 }) {

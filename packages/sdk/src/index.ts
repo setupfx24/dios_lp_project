@@ -10,6 +10,7 @@ export {
   type DepositMethod,
   type DepositRequestDto,
   type CommissionDto,
+  type TradeListItem,
 } from './client.js';
 export {
   AdminClient,
