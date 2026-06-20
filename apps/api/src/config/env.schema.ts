@@ -55,7 +55,7 @@ export const envSchema = z.object({
 
   // Admin auth — separate secret + cookie from broker JWT.
   ADMIN_JWT_SECRET: z.string().min(32, 'ADMIN_JWT_SECRET must be at least 32 characters'),
-  ADMIN_JWT_EXPIRY: z.string().default('15m'),
+  ADMIN_JWT_EXPIRY: z.string().default('12h'),
 
   // Deprecated alias for COOKIE_DOMAIN, kept so already-deployed envs that only
   // set this keep working. Prefer COOKIE_DOMAIN. Read via the cookieDomainOpt helper.
@@ -68,8 +68,8 @@ export const envSchema = z.object({
   // Default ₹10,000 = 10_00_000 paise.
   ADMIN_4EYES_THRESHOLD_PAISE: z.coerce.number().int().min(0).default(1_000_000),
 
-  // Idle timeout for admin sessions (default 15 minutes).
-  ADMIN_IDLE_TIMEOUT_SECONDS: z.coerce.number().int().min(60).max(86_400).default(900),
+  // Idle timeout for admin sessions (default 12 hours).
+  ADMIN_IDLE_TIMEOUT_SECONDS: z.coerce.number().int().min(60).max(86_400).default(43_200),
 
   // AES-256-GCM passphrase for at-rest encryption of TOTP secrets.
   TOTP_ENCRYPTION_KEY: z.string().min(32, 'TOTP_ENCRYPTION_KEY must be at least 32 characters'),

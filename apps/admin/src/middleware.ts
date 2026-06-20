@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 const PUBLIC_PATHS = ['/login', '/two-factor', '/recovery'];
-const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
+const IDLE_TIMEOUT_MS = 12 * 60 * 60 * 1000; // 12 hours
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
