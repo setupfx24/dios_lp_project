@@ -1,7 +1,7 @@
 'use client';
 
 import { DEPOSIT_METHODS, type DepositMethod } from '@lp/sdk';
-import { Plus, Wallet as WalletIcon } from 'lucide-react';
+import { FileText, Plus, Wallet as WalletIcon } from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge, Card, Loader, PageHeader } from '@/components/dash/ui';
@@ -38,6 +38,64 @@ function paginate<T>(items: readonly T[], page: number, size: number) {
     totalPages,
     total: items.length,
   };
+}
+
+const esc = (v: unknown): string =>
+  String(v ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c] ?? c);
+
+/** Dependency-free PDF export of a simple table (print-to-PDF). */
+function PdfBtn({
+  label,
+  head,
+  rows,
+  from,
+  to,
+}: {
+  label: string;
+  head: string[];
+  rows: string[][];
+  from: string;
+  to: string;
+}) {
+  function download() {
+    const range = from || to ? `${from || '…'} -> ${to || '…'}` : 'All dates';
+    const generated = new Date().toLocaleString();
+    const body = rows
+      .map((r) => `<tr>${r.map((cell) => `<td>${esc(cell)}</td>`).join('')}</tr>`)
+      .join('');
+    const html = `<!doctype html><html><head><meta charset="utf-8"/>
+      <title>${esc(label)} report</title>
+      <style>
+        *{font-family:Arial,Helvetica,sans-serif}
+        body{margin:24px;color:#111}
+        h1{font-size:18px;margin:0 0 4px}
+        .meta{font-size:12px;color:#555;margin-bottom:16px}
+        table{width:100%;border-collapse:collapse;font-size:11px}
+        th,td{border:1px solid #ddd;padding:5px 7px;text-align:left}
+        th{background:#f3f3f3}
+      </style></head><body>
+      <h1>${esc(label)}</h1>
+      <div class="meta">Date range: ${esc(range)} · ${rows.length} entries · Generated ${esc(generated)}</div>
+      <table>
+        <thead><tr>${head.map((h) => `<th>${esc(h)}</th>`).join('')}</tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+      <script>window.onload=function(){window.print();}</script>
+    </body></html>`;
+    const w = window.open('', '_blank');
+    if (!w) return;
+    w.document.write(html);
+    w.document.close();
+  }
+  return (
+    <button
+      type="button"
+      onClick={download}
+      className="inline-flex items-center gap-2 rounded-md border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-200 hover:bg-zinc-700"
+    >
+      <FileText className="h-3.5 w-3.5" /> PDF
+    </button>
+  );
 }
 
 function Pager({
@@ -94,12 +152,25 @@ export default function WalletPage() {
   const [error, setError] = useState<string | null>(null);
   const [depPage, setDepPage] = useState(1);
   const [txPage, setTxPage] = useState(1);
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
 
   const primary = wallet.data?.wallets[0];
   const balance = primary ? Number(primary.balance) : 0;
   const currency = primary?.currency ?? 'USD';
-  const entries = ledger.data?.items ?? [];
-  const requests = deposits.data?.items ?? [];
+  const allEntries = ledger.data?.items ?? [];
+  const allRequests = deposits.data?.items ?? [];
+
+  const fromTs = from ? new Date(`${from}T00:00:00`).getTime() : null;
+  const toTs = to ? new Date(`${to}T23:59:59.999`).getTime() : null;
+  const inRange = (iso: string) => {
+    const ts = new Date(iso).getTime();
+    if (fromTs !== null && ts < fromTs) return false;
+    if (toTs !== null && ts > toTs) return false;
+    return true;
+  };
+  const entries = allEntries.filter((e) => inRange(e.createdAt));
+  const requests = allRequests.filter((r) => inRange(r.createdAt));
 
   const depPaged = paginate(requests, depPage, PAGE_SIZE);
   const txPaged = paginate(entries, txPage, PAGE_SIZE);
@@ -160,6 +231,47 @@ export default function WalletPage() {
           </div>
         </div>
       </Card>
+
+      <div className="mb-6 flex flex-wrap items-center gap-2">
+        <span className="text-sm text-zinc-400">Filter by date:</span>
+        <input
+          type="date"
+          value={from}
+          max={to || undefined}
+          onChange={(e) => {
+            setFrom(e.target.value);
+            setDepPage(1);
+            setTxPage(1);
+          }}
+          aria-label="From date"
+          className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
+        />
+        <span className="text-sm text-zinc-500">to</span>
+        <input
+          type="date"
+          value={to}
+          min={from || undefined}
+          onChange={(e) => {
+            setTo(e.target.value);
+            setDepPage(1);
+            setTxPage(1);
+          }}
+          aria-label="To date"
+          className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
+        />
+        {(from || to) && (
+          <button
+            type="button"
+            onClick={() => {
+              setFrom('');
+              setTo('');
+            }}
+            className="rounded-md bg-zinc-800 px-3 py-2 text-sm font-medium text-zinc-400 hover:text-white"
+          >
+            Clear
+          </button>
+        )}
+      </div>
 
       {open && (
         <Card className="mb-6">
@@ -230,7 +342,22 @@ export default function WalletPage() {
       <Card className="mb-6">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-semibold text-white">Deposit requests</h3>
-          <span className="text-xs text-zinc-500">{requests.length} requests</span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-zinc-500">{requests.length} requests</span>
+            <PdfBtn
+              label="Deposit requests"
+              from={from}
+              to={to}
+              head={['Date', 'Method', 'Amount', 'Note', 'Status']}
+              rows={requests.map((r) => [
+                new Date(r.createdAt).toLocaleString(),
+                METHOD_LABEL[r.method] ?? r.method,
+                `${Number(r.amount).toFixed(2)} ${r.currency}`,
+                r.note ?? '—',
+                r.status,
+              ])}
+            />
+          </div>
         </div>
         {deposits.isLoading ? (
           <Loader label="Loading deposit requests…" />
@@ -286,7 +413,22 @@ export default function WalletPage() {
       <Card>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-semibold text-white">Transaction history</h3>
-          <span className="text-xs text-zinc-500">{entries.length} entries</span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-zinc-500">{entries.length} entries</span>
+            <PdfBtn
+              label="Transaction history"
+              from={from}
+              to={to}
+              head={['Type', 'Amount', 'Reference', 'Description', 'Date']}
+              rows={entries.map((e) => [
+                e.direction,
+                `${e.direction === 'CREDIT' ? '+' : '-'}${e.amount} ${e.currency}`,
+                e.referenceType,
+                e.description,
+                new Date(e.createdAt).toLocaleString(),
+              ])}
+            />
+          </div>
         </div>
         {ledger.isLoading ? (
           <Loader label="Loading transactions…" />
