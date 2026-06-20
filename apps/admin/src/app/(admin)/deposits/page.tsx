@@ -109,6 +109,7 @@ export default function DepositsPage() {
                 <tr>
                   <th className="py-2">Date</th>
                   <th className="py-2">Broker</th>
+                  <th className="py-2">Type</th>
                   <th className="py-2">Method</th>
                   <th className="py-2 text-right">Amount</th>
                   <th className="py-2">Note</th>
@@ -123,6 +124,11 @@ export default function DepositsPage() {
                       {new Date(d.createdAt).toLocaleString()}
                     </td>
                     <td className="py-2">{d.broker}</td>
+                    <td
+                      className={`py-2 font-medium ${d.kind === 'withdrawal' ? 'text-amber-400' : 'text-emerald-400'}`}
+                    >
+                      {d.kind === 'withdrawal' ? 'Withdrawal' : 'Deposit'}
+                    </td>
                     <td className="py-2">{METHOD_LABEL[d.method] ?? d.method}</td>
                     <td className="py-2 text-right font-medium text-foreground">
                       {usd(d.amount)} <span className="text-muted-foreground">{d.currency}</span>

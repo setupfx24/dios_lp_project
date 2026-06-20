@@ -22,7 +22,7 @@ import { OrdersRepository } from '../orders/orders.repository.js';
 
 import type { OrderRow } from '../orders/schema/order.schema.js';
 
-/** Broker-submitted deposit (funding) request. Manual flow for now — no live
+/** Broker-submitted deposit/withdrawal request. Manual flow for now — no live
  *  payment gateway; the broker picks a method and the LP admin approves. */
 const createDepositSchema = z.object({
   amount: z.string().regex(/^\d+(\.\d{1,4})?$/, 'amount must be a positive decimal'),
@@ -31,8 +31,12 @@ const createDepositSchema = z.object({
   note: z.string().trim().max(500).optional(),
 });
 
+/** Locked floor — only the wallet balance ABOVE this can be withdrawn. */
+const WITHDRAW_FLOOR = Number(process.env.WITHDRAW_FLOOR ?? '5000');
+
 interface DepositRequestRow {
   request_id: string;
+  kind: string;
   amount: string;
   currency: string;
   method: string;
@@ -68,6 +72,7 @@ export class BrokerPortalController {
       v == null ? null : v instanceof Date ? v.toISOString() : String(v);
     return {
       requestId: r.request_id,
+      kind: r.kind,
       amount: r.amount,
       currency: r.currency,
       method: r.method,
@@ -99,7 +104,7 @@ export class BrokerPortalController {
     `);
     const found = BrokerPortalController.rows<DepositRequestRow>(
       await this.db.execute(sql`
-        SELECT request_id, amount::text AS amount, currency, method, reference, note,
+        SELECT request_id, kind, amount::text AS amount, currency, method, reference, note,
                status, created_at, decided_at
         FROM ledger.deposit_requests WHERE request_id = ${requestId} LIMIT 1`),
     );
@@ -123,7 +128,7 @@ export class BrokerPortalController {
     const brokerId = this.scope(user, requested);
     const raw = BrokerPortalController.rows<DepositRequestRow>(
       await this.db.execute(sql`
-        SELECT request_id, amount::text AS amount, currency, method, reference, note,
+        SELECT request_id, kind, amount::text AS amount, currency, method, reference, note,
                status, created_at, decided_at
         FROM ledger.deposit_requests
         WHERE broker_id = ${brokerId}
@@ -131,6 +136,80 @@ export class BrokerPortalController {
         LIMIT 100`),
     );
     return { items: raw.map((r) => BrokerPortalController.mapDeposit(r)) };
+  }
+
+  /** How much the broker can withdraw right now (balance above the floor). */
+  @Get('wallet/withdrawable')
+  async withdrawable(
+    @CurrentUser() user: CurrentUserPayload | null,
+    @Query('brokerId') requested?: string,
+  ): Promise<{ balance: string; floor: string; withdrawable: string; currency: string }> {
+    const brokerId = this.scope(user, requested);
+    const walletsOf = await this.ledger.findWalletsByBroker(brokerId);
+    const currency = walletsOf[0]?.currency ?? 'USD';
+    let balance = 0;
+    for (const w of walletsOf) {
+      balance += Number(await this.ledger.getBalance(w.walletId));
+    }
+    const avail = Math.max(0, balance - WITHDRAW_FLOOR);
+    return {
+      balance: balance.toFixed(2),
+      floor: WITHDRAW_FLOOR.toFixed(2),
+      withdrawable: avail.toFixed(2),
+      currency,
+    };
+  }
+
+  /**
+   * Submit a withdrawal request — capped at the balance ABOVE the locked floor
+   * (only profit over $5000 can be pulled out). Lands as PENDING for admin
+   * review; approval DEBITs the wallet.
+   */
+  @Post('wallet/withdrawal-requests')
+  @UsePipes(new ZodValidationPipe(createDepositSchema))
+  async createWithdrawalRequest(
+    @CurrentUser() user: CurrentUserPayload | null,
+    @Body() body: z.infer<typeof createDepositSchema>,
+  ) {
+    const brokerId = this.scope(user);
+    const walletsOf = await this.ledger.findWalletsByBroker(brokerId);
+    const currency = walletsOf[0]?.currency ?? 'USD';
+    let balance = 0;
+    for (const w of walletsOf) {
+      balance += Number(await this.ledger.getBalance(w.walletId));
+    }
+    const avail = Math.max(0, balance - WITHDRAW_FLOOR);
+    const amount = Number(body.amount);
+    if (amount > avail + 1e-9) {
+      throw new DomainException(
+        ErrorCode.VALIDATION_FAILED,
+        `Only ${avail.toFixed(2)} ${currency} is withdrawable (balance above the ${WITHDRAW_FLOOR} floor).`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    const requestId = ulid();
+    await this.db.execute(sql`
+      INSERT INTO ledger.deposit_requests
+        (request_id, kind, broker_id, amount, currency, method, reference, note)
+      VALUES
+        (${requestId}, 'withdrawal', ${brokerId}, ${body.amount}, ${currency}, ${body.method},
+         ${body.reference ?? null}, ${body.note ?? null})
+    `);
+    const found = BrokerPortalController.rows<DepositRequestRow>(
+      await this.db.execute(sql`
+        SELECT request_id, kind, amount::text AS amount, currency, method, reference, note,
+               status, created_at, decided_at
+        FROM ledger.deposit_requests WHERE request_id = ${requestId} LIMIT 1`),
+    );
+    const created = found[0];
+    if (!created) {
+      throw new DomainException(
+        ErrorCode.INTERNAL_ERROR,
+        'Withdrawal request not persisted',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return BrokerPortalController.mapDeposit(created);
   }
 
   /**

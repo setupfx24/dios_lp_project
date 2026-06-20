@@ -236,6 +236,37 @@ export class LpClient {
     );
   }
 
+  createWithdrawalRequest(input: {
+    amount: string;
+    method?: DepositMethod;
+    reference?: string;
+    note?: string;
+  }): Promise<DepositRequestDto> {
+    return this.request(
+      '/api/v1/broker/wallet/withdrawal-requests',
+      { method: 'POST', body: JSON.stringify(input) },
+      depositRequestSchema,
+    );
+  }
+
+  getWithdrawable(): Promise<{
+    balance: string;
+    floor: string;
+    withdrawable: string;
+    currency: string;
+  }> {
+    return this.request(
+      '/api/v1/broker/wallet/withdrawable',
+      { method: 'GET' },
+      z.object({
+        balance: z.string(),
+        floor: z.string(),
+        withdrawable: z.string(),
+        currency: z.string(),
+      }),
+    );
+  }
+
   // -------- Commissions --------
   listCommissions(): Promise<{ total: string; items: CommissionDto[] }> {
     return this.request(
@@ -315,6 +346,7 @@ export type DepositMethod = (typeof DEPOSIT_METHODS)[number];
 
 const depositRequestSchema = z.object({
   requestId: z.string(),
+  kind: z.string().optional(),
   amount: z.string(),
   currency: z.string(),
   method: z.string(),

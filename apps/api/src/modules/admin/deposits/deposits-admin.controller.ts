@@ -17,6 +17,7 @@ import { TotpVerifiedGuard } from '../common/totp-verified.guard.js';
 
 interface DepositRow {
   request_id: string;
+  kind: string;
   broker_id: string;
   broker_name: string;
   amount: string;
@@ -53,6 +54,7 @@ export class DepositsAdminController {
       v == null ? null : v instanceof Date ? v.toISOString() : String(v);
     return {
       requestId: r.request_id,
+      kind: r.kind,
       brokerId: r.broker_id,
       broker: r.broker_name,
       amount: r.amount,
@@ -73,7 +75,7 @@ export class DepositsAdminController {
     const statusFilter = status ?? null;
     const raw = DepositsAdminController.rows<DepositRow>(
       await this.db.execute(sql`
-        SELECT d.request_id, d.broker_id, b.display_name AS broker_name,
+        SELECT d.request_id, d.kind, d.broker_id, b.display_name AS broker_name,
                d.amount::text AS amount, d.currency, d.method, d.reference, d.note,
                d.status, d.decided_by, d.created_at, d.decided_at
         FROM ledger.deposit_requests d
@@ -93,33 +95,48 @@ export class DepositsAdminController {
     const tx = requireTx(ctx);
     const found = DepositsAdminController.rows<DepositRow>(
       await tx.execute(sql`
-        SELECT request_id, broker_id, '' AS broker_name, amount::text AS amount, currency,
+        SELECT request_id, kind, broker_id, '' AS broker_name, amount::text AS amount, currency,
                method, reference, note, status, decided_by, created_at, decided_at
         FROM ledger.deposit_requests WHERE request_id = ${requestId} LIMIT 1`),
     );
     const req = found[0];
     if (!req) {
-      throw new DomainException(ErrorCode.NOT_FOUND, 'Deposit request not found', HttpStatus.NOT_FOUND);
+      throw new DomainException(ErrorCode.NOT_FOUND, 'Request not found', HttpStatus.NOT_FOUND);
     }
     if (req.status !== 'PENDING') {
       throw new DomainException(
         ErrorCode.CONFLICT,
-        `Deposit request already ${req.status.toLowerCase()}`,
+        `Request already ${req.status.toLowerCase()}`,
         HttpStatus.CONFLICT,
       );
     }
 
-    // Credit the broker wallet with an immutable DEPOSIT ledger entry.
+    const isWithdrawal = req.kind === 'withdrawal';
     const wallet = await this.ledger.findOrCreateWallet(req.broker_id, req.currency, tx);
+
+    // Guard withdrawals against overdraft (balance can move between request +
+    // approval). Deposits always credit.
+    if (isWithdrawal) {
+      const bal = Number(await this.ledger.getBalance(wallet.walletId));
+      if (Number(req.amount) > bal + 1e-9) {
+        throw new DomainException(
+          ErrorCode.CONFLICT,
+          `Insufficient balance to approve withdrawal (have ${bal.toFixed(2)} ${req.currency})`,
+          HttpStatus.CONFLICT,
+        );
+      }
+    }
+
+    // Post the immutable ledger entry: deposit CREDITs, withdrawal DEBITs.
     await tx.insert(ledgerEntries).values({
       entryId: ulid(),
       walletId: wallet.walletId,
-      direction: 'CREDIT',
+      direction: isWithdrawal ? 'DEBIT' : 'CREDIT',
       amount: req.amount,
       currency: req.currency,
-      referenceType: 'DEPOSIT',
+      referenceType: isWithdrawal ? 'WITHDRAWAL' : 'DEPOSIT',
       referenceId: requestId,
-      description: `Deposit via ${req.method} (approved)`,
+      description: `${isWithdrawal ? 'Withdrawal' : 'Deposit'} via ${req.method} (approved)`,
     });
 
     const decidedBy = ctx.user.email;
@@ -132,6 +149,7 @@ export class DepositsAdminController {
       ...requireAudit(ctx),
       resourceId: requestId,
       afterState: {
+        kind: req.kind,
         brokerId: req.broker_id,
         amount: req.amount,
         currency: req.currency,

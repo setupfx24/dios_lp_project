@@ -43,3 +43,19 @@ export function useCreateDepositRequest() {
     },
   });
 }
+
+export function useWithdrawable() {
+  return useQuery({ queryKey: ['withdrawable'], queryFn: () => lp.getWithdrawable() });
+}
+
+export function useCreateWithdrawalRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { amount: string; method: DepositMethod; reference?: string; note?: string }) =>
+      lp.createWithdrawalRequest(input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['deposit-requests'] });
+      void qc.invalidateQueries({ queryKey: ['withdrawable'] });
+    },
+  });
+}

@@ -77,6 +77,7 @@ export type CreateBrokerResult = z.infer<typeof createBrokerResponse>;
 
 const adminDepositSchema = z.object({
   requestId: z.string(),
+  kind: z.string().optional(),
   brokerId: z.string(),
   broker: z.string(),
   amount: z.string(),

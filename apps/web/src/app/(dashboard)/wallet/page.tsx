@@ -1,15 +1,17 @@
 'use client';
 
 import { DEPOSIT_METHODS, type DepositMethod } from '@lp/sdk';
-import { FileText, Plus, Wallet as WalletIcon } from 'lucide-react';
+import { FileText, Minus, Plus, Wallet as WalletIcon } from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge, Card, Loader, PageHeader } from '@/components/dash/ui';
 import {
   useCreateDepositRequest,
+  useCreateWithdrawalRequest,
   useDepositRequests,
   useLedger,
   useWallet,
+  useWithdrawable,
 } from '@/features/account/hooks';
 import { LedgerTable } from '@/features/account/ledger-table';
 
@@ -144,16 +146,26 @@ export default function WalletPage() {
   const ledger = useLedger(200);
   const deposits = useDepositRequests();
   const createDeposit = useCreateDepositRequest();
+  const createWithdrawal = useCreateWithdrawalRequest();
+  const withdrawableQ = useWithdrawable();
 
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<DepositMethod>('card');
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // Withdraw form (separate state).
+  const [wOpen, setWOpen] = useState(false);
+  const [wAmount, setWAmount] = useState('');
+  const [wMethod, setWMethod] = useState<DepositMethod>('bank');
+  const [wNote, setWNote] = useState('');
+  const [wError, setWError] = useState<string | null>(null);
   const [depPage, setDepPage] = useState(1);
   const [txPage, setTxPage] = useState(1);
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+
+  const withdrawable = Number(withdrawableQ.data?.withdrawable ?? '0');
 
   const primary = wallet.data?.wallets[0];
   const balance = primary ? Number(primary.balance) : 0;
@@ -196,20 +208,61 @@ export default function WalletPage() {
     }
   }
 
+  async function submitWithdraw(e: React.FormEvent) {
+    e.preventDefault();
+    setWError(null);
+    if (!/^\d+(\.\d{1,4})?$/.test(wAmount) || Number(wAmount) <= 0) {
+      setWError('Enter a valid amount greater than 0.');
+      return;
+    }
+    if (Number(wAmount) > withdrawable + 1e-9) {
+      setWError(`You can withdraw at most ${withdrawable.toFixed(2)} (balance above the $5,000 floor).`);
+      return;
+    }
+    try {
+      await createWithdrawal.mutateAsync({
+        amount: wAmount,
+        method: wMethod,
+        ...(wNote.trim() ? { note: wNote.trim() } : {}),
+      });
+      setWAmount('');
+      setWNote('');
+      setWOpen(false);
+    } catch (err) {
+      setWError(err instanceof Error ? err.message : 'Failed to submit request');
+    }
+  }
+
   return (
     <div>
       <PageHeader
         title="Wallet"
         subtitle="Balance, deposits and transaction history"
         actions={
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700"
-          >
-            <Plus className="h-4 w-4" />
-            Add Funds
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setWOpen((v) => !v);
+                setOpen(false);
+              }}
+              className="inline-flex items-center gap-2 rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-amber-700"
+            >
+              <Minus className="h-4 w-4" />
+              Withdraw
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setOpen((v) => !v);
+                setWOpen(false);
+              }}
+              className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700"
+            >
+              <Plus className="h-4 w-4" />
+              Add Funds
+            </button>
+          </div>
         }
       />
 
@@ -339,18 +392,92 @@ export default function WalletPage() {
         </Card>
       )}
 
+      {wOpen && (
+        <Card className="mb-6">
+          <h3 className="mb-1 font-semibold text-white">Withdraw funds</h3>
+          <p className="mb-1 text-sm text-zinc-400">
+            Submit a withdrawal request for admin approval. Only the balance above the locked
+            $5,000 floor can be withdrawn.
+          </p>
+          <p className="mb-4 text-sm font-medium text-amber-400">
+            Available to withdraw: {withdrawable.toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}{' '}
+            {currency}
+          </p>
+          <form className="space-y-4" onSubmit={(e) => void submitWithdraw(e)}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-zinc-400">
+                  Amount ({currency})
+                </label>
+                <input
+                  inputMode="decimal"
+                  value={wAmount}
+                  onChange={(e) => setWAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-amber-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-zinc-400">Method</label>
+                <select
+                  value={wMethod}
+                  onChange={(e) => setWMethod(e.target.value as DepositMethod)}
+                  className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
+                >
+                  {DEPOSIT_METHODS.map((m) => (
+                    <option key={m} value={m}>
+                      {METHOD_LABEL[m] ?? m}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-400">Note (optional)</label>
+              <input
+                value={wNote}
+                onChange={(e) => setWNote(e.target.value)}
+                placeholder="Bank account / UPI id / remark"
+                className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-amber-500 focus:outline-none"
+              />
+            </div>
+            {wError && <p className="text-sm text-red-400">{wError}</p>}
+            <div className="flex items-center gap-2">
+              <button
+                type="submit"
+                disabled={createWithdrawal.isPending || withdrawable <= 0}
+                className="rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-60"
+              >
+                {createWithdrawal.isPending ? 'Submitting…' : 'Submit withdrawal'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setWOpen(false)}
+                className="rounded-md bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </Card>
+      )}
+
       <Card className="mb-6">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="font-semibold text-white">Deposit requests</h3>
+          <h3 className="font-semibold text-white">Deposit &amp; withdrawal requests</h3>
           <div className="flex items-center gap-3">
             <span className="text-xs text-zinc-500">{requests.length} requests</span>
             <PdfBtn
-              label="Deposit requests"
+              label="Deposit & withdrawal requests"
               from={from}
               to={to}
-              head={['Date', 'Method', 'Amount', 'Note', 'Status']}
+              head={['Date', 'Type', 'Method', 'Amount', 'Note', 'Status']}
               rows={requests.map((r) => [
                 new Date(r.createdAt).toLocaleString(),
+                r.kind === 'withdrawal' ? 'Withdrawal' : 'Deposit',
                 METHOD_LABEL[r.method] ?? r.method,
                 `${Number(r.amount).toFixed(2)} ${r.currency}`,
                 r.note ?? '—',
@@ -363,7 +490,7 @@ export default function WalletPage() {
           <Loader label="Loading deposit requests…" />
         ) : requests.length === 0 ? (
           <p className="text-sm text-zinc-500">
-            No deposit requests yet. Use “Add Funds” to submit one.
+            No requests yet. Use “Add Funds” or “Withdraw” to submit one.
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -371,6 +498,7 @@ export default function WalletPage() {
               <thead className="text-left text-zinc-500">
                 <tr>
                   <th className="py-2">Date</th>
+                  <th className="py-2">Type</th>
                   <th className="py-2">Method</th>
                   <th className="py-2 text-right">Amount</th>
                   <th className="py-2">Note</th>
@@ -382,6 +510,11 @@ export default function WalletPage() {
                   <tr key={r.requestId} className="border-t border-zinc-800">
                     <td className="whitespace-nowrap py-2 text-zinc-400">
                       {new Date(r.createdAt).toLocaleString()}
+                    </td>
+                    <td className="py-2">
+                      <Badge color={r.kind === 'withdrawal' ? 'yellow' : 'green'}>
+                        {r.kind === 'withdrawal' ? 'Withdrawal' : 'Deposit'}
+                      </Badge>
                     </td>
                     <td className="py-2 text-zinc-300">{METHOD_LABEL[r.method] ?? r.method}</td>
                     <td className="py-2 text-right font-medium text-white">
