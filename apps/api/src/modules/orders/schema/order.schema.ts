@@ -36,6 +36,9 @@ export const orders = trading.table(
     // Optional end-user label from the upstream broker (e.g. dios sends the
     // DIOS user's name) so the broker portal can show who placed each trade.
     clientUserLabel: text('client_user_label'),
+    // Optional end-user id from the upstream broker (dios sends the DIOS user's
+    // _id) so the portals can show a stable identifier per trading user.
+    clientUserId: text('client_user_id'),
     // Commission charged to the user (upstream broker sends it); recorded as a
     // BROKERAGE charge on the resulting trade so it shows in the Charges column.
     commissionAmount: numeric('commission_amount', { precision: 20, scale: 4 }),

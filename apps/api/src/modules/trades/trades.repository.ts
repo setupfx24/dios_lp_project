@@ -15,6 +15,7 @@ import type { TradeListQuery } from '@lp/validators';
 export interface TradeListItemRow extends TradeRow {
   clientOrderId: string | null;
   clientUserLabel: string | null;
+  clientUserId: string | null;
   chargesTotal: string;
 }
 
@@ -78,6 +79,7 @@ export class TradesRepository {
         // "<tradeId>-C", so the UI labels it CLOSE; everything else is OPEN.
         clientOrderId: orders.clientOrderId,
         clientUserLabel: orders.clientUserLabel,
+        clientUserId: orders.clientUserId,
         // Summed post-trade charges for this trade (0 when none yet).
         chargesTotal: sql<string>`COALESCE((SELECT SUM(${charges.amount}) FROM ${charges} WHERE ${charges.tradeId} = ${trades.tradeId}), 0)::text`,
       })
