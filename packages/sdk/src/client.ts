@@ -334,6 +334,8 @@ const commissionSchema = z.object({
   symbol: z.string(),
   side: z.string(),
   quantity: z.string(),
+  user: z.string().nullable().optional(),
+  userId: z.string().nullable().optional(),
 });
 export type CommissionDto = z.infer<typeof commissionSchema>;
 

@@ -152,12 +152,16 @@ export class BrokerPortalController {
       symbol: string;
       side: string;
       quantity: string;
+      client_user_label: string | null;
+      client_user_id: string | null;
     }>(
       await this.db.execute(sql`
         SELECT c.amount::text AS amount, c.description, c.created_at,
-               t.trade_id, t.symbol, t.side, t.quantity::text AS quantity
+               t.trade_id, t.symbol, t.side, t.quantity::text AS quantity,
+               o.client_user_label, o.client_user_id
         FROM trading.charges c
         JOIN trading.trades t ON t.trade_id = c.trade_id
+        LEFT JOIN trading.orders o ON o.order_id = t.order_id
         WHERE t.broker_id = ${brokerId} AND c.type = 'BROKERAGE'
         ORDER BY c.id DESC
         LIMIT 500`),
@@ -180,6 +184,8 @@ export class BrokerPortalController {
         symbol: r.symbol,
         side: r.side,
         quantity: r.quantity,
+        user: r.client_user_label,
+        userId: r.client_user_id,
       })),
     };
   }
