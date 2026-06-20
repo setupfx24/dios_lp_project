@@ -260,7 +260,7 @@ export default function WalletPage() {
               className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700"
             >
               <Plus className="h-4 w-4" />
-              Add Funds
+              Deposit
             </button>
           </div>
         }
@@ -328,7 +328,7 @@ export default function WalletPage() {
 
       {open && (
         <Card className="mb-6">
-          <h3 className="mb-1 font-semibold text-white">Add Funds</h3>
+          <h3 className="mb-1 font-semibold text-white">Deposit</h3>
           <p className="mb-4 text-sm text-zinc-400">
             Submit a deposit request. Your LP admin reviews it and, once approved, the amount is
             credited to your wallet.
@@ -490,7 +490,7 @@ export default function WalletPage() {
           <Loader label="Loading deposit requests…" />
         ) : requests.length === 0 ? (
           <p className="text-sm text-zinc-500">
-            No requests yet. Use “Add Funds” or “Withdraw” to submit one.
+            No requests yet. Use “Deposit” or “Withdraw” to submit one.
           </p>
         ) : (
           <div className="overflow-x-auto">
