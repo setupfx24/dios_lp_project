@@ -49,3 +49,14 @@
     font-feature-settings: 'rlig' 1, 'calt' 1;
   }
 }
+
+/* Make the native date-input calendar icon white so it's visible on the dark
+   broker theme (default is near-black). Applies to every date picker. */
+input[type='date']::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(2);
+  cursor: pointer;
+  opacity: 0.85;
+}
+input[type='date']::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
