@@ -11,6 +11,7 @@ export {
   type DepositRequestDto,
   type CommissionDto,
   type TradeListItem,
+  type DashboardSummary,
 } from './client.js';
 export {
   AdminClient,

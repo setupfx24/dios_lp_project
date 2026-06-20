@@ -363,6 +363,102 @@ export class BrokerPortalController {
     return { items };
   }
 
+  /**
+   * Account summary for the dashboard. Money model:
+   *   balance        = wallet ledger (CREDIT − DEBIT)
+   *   lockedCapital  = fixed floor that can't be traded/withdrawn ($5000)
+   *   profitWallet   = balance above the floor
+   *   withdrawable   = same (only profit over the floor)
+   *   totalCharges   = sum of BROKERAGE commissions
+   *   rawPnl         = realized P&L from closed (paired open/close) trades
+   *   netPnl         = rawPnl − totalCharges
+   *   floatingPnl    = unrealized P&L of open positions (live snapshot)
+   *   totalEquity    = balance + floatingPnl
+   *   freeMargin     = equity above the locked floor
+   */
+  @Get('dashboard')
+  async dashboard(
+    @CurrentUser() user: CurrentUserPayload | null,
+    @Query('brokerId') requested?: string,
+  ) {
+    const brokerId = this.scope(user, requested);
+
+    const walletsOf = await this.ledger.findWalletsByBroker(brokerId);
+    const currency = walletsOf[0]?.currency ?? 'USD';
+    let balance = 0;
+    for (const w of walletsOf) {
+      balance += Number(await this.ledger.getBalance(w.walletId));
+    }
+
+    const chargeRow = BrokerPortalController.rows<{ total: string }>(
+      await this.db.execute(sql`
+        SELECT COALESCE(SUM(c.amount), 0)::text AS total
+        FROM trading.charges c
+        JOIN trading.trades t ON t.trade_id = c.trade_id
+        WHERE t.broker_id = ${brokerId} AND c.type = 'BROKERAGE'`),
+    );
+    const totalCharges = Number(chargeRow[0]?.total ?? '0');
+
+    // Realized P&L: pair each close leg (clientOrderId "<id>-C") with its open.
+    const legs = BrokerPortalController.rows<{
+      coid: string | null;
+      side: string;
+      price: string;
+      qty: string;
+    }>(
+      await this.db.execute(sql`
+        SELECT o.client_order_id AS coid, t.side, t.price::text AS price, t.quantity::text AS qty
+        FROM trading.trades t
+        LEFT JOIN trading.orders o ON o.order_id = t.order_id
+        WHERE t.broker_id = ${brokerId}`),
+    );
+    const opens = new Map<string, { side: string; price: number; qty: number }>();
+    for (const l of legs) {
+      if (l.coid && !l.coid.endsWith('-C')) {
+        opens.set(l.coid, { side: l.side, price: Number(l.price), qty: Number(l.qty) });
+      }
+    }
+    let rawPnl = 0;
+    for (const l of legs) {
+      if (!l.coid || !l.coid.endsWith('-C')) continue;
+      const open = opens.get(l.coid.slice(0, -2));
+      if (!open) continue;
+      const closePrice = Number(l.price);
+      const dir = open.side === 'BUY' ? 1 : -1;
+      rawPnl += (closePrice - open.price) * open.qty * dir;
+    }
+
+    // Floating P&L from the live positions snapshot (pushed by the upstream broker).
+    let floatingPnl = 0;
+    const snap = await this.redis.get(`positions:${brokerId}`).catch(() => null);
+    if (snap) {
+      try {
+        floatingPnl = Number((JSON.parse(snap) as { totalPnl?: string }).totalPnl ?? 0);
+      } catch {
+        floatingPnl = 0;
+      }
+    }
+
+    const lockedCapital = WITHDRAW_FLOOR;
+    const profitWallet = Math.max(0, balance - lockedCapital);
+    const totalEquity = balance + floatingPnl;
+    const round = (n: number) => n.toFixed(2);
+
+    return {
+      currency,
+      balance: round(balance),
+      lockedCapital: round(lockedCapital),
+      profitWallet: round(profitWallet),
+      withdrawable: round(profitWallet),
+      totalCharges: round(totalCharges),
+      rawPnl: round(rawPnl),
+      netPnl: round(rawPnl - totalCharges),
+      floatingPnl: round(floatingPnl),
+      totalEquity: round(totalEquity),
+      freeMargin: round(Math.max(0, totalEquity - lockedCapital)),
+    };
+  }
+
   private scope(user: CurrentUserPayload | null, requested?: string): string {
     if (!user) {
       throw new DomainException(ErrorCode.AUTH_FORBIDDEN, 'No user', HttpStatus.FORBIDDEN);

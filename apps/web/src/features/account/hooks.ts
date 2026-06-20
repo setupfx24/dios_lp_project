@@ -14,6 +14,14 @@ export function useWallet() {
   return useQuery({ queryKey: ['wallet'], queryFn: () => lp.getWallet() });
 }
 
+export function useDashboard() {
+  return useQuery({
+    queryKey: ['dashboard'],
+    queryFn: () => lp.getDashboard(),
+    refetchInterval: 5000,
+  });
+}
+
 export function useLedger(limit = 100) {
   return useQuery({ queryKey: ['ledger', limit], queryFn: () => lp.listLedger(limit) });
 }

@@ -267,6 +267,10 @@ export class LpClient {
     );
   }
 
+  getDashboard(): Promise<DashboardSummary> {
+    return this.request('/api/v1/broker/dashboard', { method: 'GET' }, dashboardSummarySchema);
+  }
+
   // -------- Commissions --------
   listCommissions(): Promise<{ total: string; items: CommissionDto[] }> {
     return this.request(
@@ -370,6 +374,21 @@ const commissionSchema = z.object({
   userId: z.string().nullable().optional(),
 });
 export type CommissionDto = z.infer<typeof commissionSchema>;
+
+const dashboardSummarySchema = z.object({
+  currency: z.string(),
+  balance: z.string(),
+  lockedCapital: z.string(),
+  profitWallet: z.string(),
+  withdrawable: z.string(),
+  totalCharges: z.string(),
+  rawPnl: z.string(),
+  netPnl: z.string(),
+  floatingPnl: z.string(),
+  totalEquity: z.string(),
+  freeMargin: z.string(),
+});
+export type DashboardSummary = z.infer<typeof dashboardSummarySchema>;
 
 export type BrokerMe = z.infer<typeof brokerMeSchema>;
 export type BrokerWallet = z.infer<typeof brokerWalletSchema>;
