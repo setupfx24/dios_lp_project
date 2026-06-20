@@ -1,9 +1,9 @@
 'use client';
 
-import { Activity, BarChart3, Download, FileText, Loader2, Search, TrendingUp } from 'lucide-react';
+import { Activity, BarChart3, FileText, Loader2, Search, TrendingUp } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
-import type { TradeListItem, TradeRecordDto } from '@lp/sdk';
+import type { TradeListItem } from '@lp/sdk';
 
 import {
   Badge,
@@ -77,12 +77,7 @@ export default function TradesPage() {
       <PageHeader
         title="Trades"
         subtitle="Executed trades — append-only and hash-chained on the server."
-        actions={
-          <div className="flex items-center gap-2">
-            <CsvButton trades={all} />
-            <PdfButton trades={filtered} from={from} to={to} />
-          </div>
-        }
+        actions={<PdfButton trades={filtered} from={from} to={to} />}
       />
 
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
@@ -262,31 +257,6 @@ export default function TradesPage() {
         </div>
       </div>
     </div>
-  );
-}
-
-function CsvButton({ trades }: { trades: readonly TradeRecordDto[] }) {
-  const csv = useMemo(() => {
-    const header = ['executedAt', 'tradeId', 'orderId', 'symbol', 'side', 'quantity', 'price'];
-    const lines = [header.join(',')];
-    for (const r of trades) {
-      lines.push(
-        [r.executedAt, r.tradeId, r.orderId, r.symbol, r.side, r.quantity, r.price]
-          .map((v) => `"${String(v).replaceAll('"', '""')}"`)
-          .join(','),
-      );
-    }
-    return lines.join('\n');
-  }, [trades]);
-
-  return (
-    <a
-      href={`data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`}
-      download="trades.csv"
-      className="inline-flex items-center gap-2 rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm font-medium text-zinc-200 hover:bg-zinc-700"
-    >
-      <Download className="h-4 w-4" /> Export CSV
-    </a>
   );
 }
 
