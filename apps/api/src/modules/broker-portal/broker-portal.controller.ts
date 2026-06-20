@@ -441,7 +441,9 @@ export class BrokerPortalController {
 
     const lockedCapital = WITHDRAW_FLOOR;
     const profitWallet = Math.max(0, balance - lockedCapital);
-    const totalEquity = balance + floatingPnl;
+    // Headline equity tracks the settled wallet balance so it always matches the
+    // Wallet page + Balance tile. Floating P&L is surfaced as its own stat.
+    const totalEquity = balance;
     const round = (n: number) => n.toFixed(2);
 
     return {
@@ -455,7 +457,7 @@ export class BrokerPortalController {
       netPnl: round(rawPnl - totalCharges),
       floatingPnl: round(floatingPnl),
       totalEquity: round(totalEquity),
-      freeMargin: round(Math.max(0, totalEquity - lockedCapital)),
+      freeMargin: round(Math.max(0, balance - lockedCapital)),
     };
   }
 
