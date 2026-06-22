@@ -136,7 +136,7 @@ export default function ChargesPage() {
                         >
                           {c.side}
                         </td>
-                        <td className="py-2 text-right">{c.quantity}</td>
+                        <td className="py-2 text-right">{Number(c.quantity).toFixed(2)}</td>
                         <td className="py-2 text-right font-medium text-red-400">
                           -{usd(c.amount)}
                         </td>
@@ -218,7 +218,7 @@ function PdfButton({
           <td class="mono">${esc(c.userId ?? '—')}</td>
           <td>${esc(c.symbol)}</td>
           <td>${esc(c.side)}</td>
-          <td class="r">${esc(c.quantity)}</td>
+          <td class="r">${esc(Number(c.quantity).toFixed(2))}</td>
           <td class="r">-${esc(Number(c.amount).toFixed(2))}</td>
         </tr>`,
       )
