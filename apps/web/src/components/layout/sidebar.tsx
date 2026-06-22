@@ -47,7 +47,7 @@ export function Sidebar() {
         <div className="flex h-7 w-7 items-center justify-center rounded bg-primary text-xs font-bold text-primary-foreground">
           LP
         </div>
-        <span className="text-lg font-semibold text-white">Broker Console</span>
+        <span className="text-lg font-semibold text-white">Dios Broker Console</span>
       </div>
       <nav className="flex flex-col gap-1">
         {NAV.map(({ href, label, icon: Icon }) => {
