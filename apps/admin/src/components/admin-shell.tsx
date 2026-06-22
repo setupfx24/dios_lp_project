@@ -38,7 +38,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
     <div className="flex h-screen w-screen overflow-hidden bg-gradient-to-br from-red-950 via-zinc-950 to-black">
       <aside className="flex w-60 shrink-0 flex-col border-r border-red-900/40 bg-gradient-to-b from-red-950/60 to-black/80 px-3 py-4">
         <div className="mb-4 flex items-center justify-center px-2">
-          <span className="text-lg font-semibold text-primary">LP Admin</span>
+          <span className="text-lg font-semibold text-primary">Dios LP Admin</span>
         </div>
         <nav className="flex flex-col gap-1">
           {NAV.map(({ href, label, icon: Icon }) => {

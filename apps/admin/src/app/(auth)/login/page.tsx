@@ -100,7 +100,7 @@ function LoginForm() {
       </div>
 
       <div className="absolute left-8 top-7 z-10 flex items-center gap-2">
-        <span className="text-lg font-semibold text-primary">LP Admin</span>
+        <span className="text-lg font-semibold text-primary">Dios LP Admin</span>
       </div>
 
       <div className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 bg-black/45 p-8 shadow-2xl backdrop-blur-xl">
