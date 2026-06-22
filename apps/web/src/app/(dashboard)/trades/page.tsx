@@ -218,7 +218,7 @@ export default function TradesPage() {
                       <Badge color="green">OPEN</Badge>
                     )}
                   </Td>
-                  <Td className="text-right">{t.quantity}</Td>
+                  <Td className="text-right">{Number(t.quantity).toFixed(2)}</Td>
                   <Td className="text-right">{t.price}</Td>
                   <Td className="text-right">{usd(Number(t.chargesTotal ?? 0))}</Td>
                   <Td className="text-right font-medium">
@@ -292,7 +292,7 @@ function PdfButton({
           <td>${esc(t.symbol)}</td>
           <td>${esc(t.side)}</td>
           <td>${esc(tStatus)}</td>
-          <td class="r">${esc(t.quantity)}</td>
+          <td class="r">${esc(Number(t.quantity).toFixed(2))}</td>
           <td class="r">${esc(t.price)}</td>
           <td class="r">${esc(t.chargesTotal ?? '0')}</td>
           <td class="r">${esc(value)}</td>
