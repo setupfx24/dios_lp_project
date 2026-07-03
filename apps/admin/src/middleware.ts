@@ -53,7 +53,8 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Exclude Next internals + static icon assets so the auth redirect doesn't
-  // intercept them (otherwise /icon.svg 307-redirects to /login).
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png).*)'],
+  // Exclude Next internals + any static image asset (public/ files like
+  // swis_logo.png, app/icon.png, etc.) so the auth redirect doesn't intercept
+  // them (otherwise e.g. /swis_logo.png 307-redirects to /login → broken image).
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|svg|jpg|jpeg|gif|webp|ico)).*)'],
 };
