@@ -99,8 +99,10 @@ function LoginForm() {
         <div className="admin-ring" style={{ animationDelay: '3.9s' }} />
       </div>
 
-      <div className="absolute left-8 top-7 z-10 flex items-center gap-2">
-        <span className="text-lg font-semibold text-primary">Dios LP Admin</span>
+      <div className="absolute left-8 top-7 z-10 flex items-center gap-3">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/swisscresta-logo.svg" alt="SwissCresta" className="h-9 w-auto" />
+        <span className="text-lg font-semibold text-zinc-300">Admin</span>
       </div>
 
       <div className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 bg-black/45 p-8 shadow-2xl backdrop-blur-xl">

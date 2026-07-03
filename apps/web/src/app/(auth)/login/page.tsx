@@ -114,10 +114,9 @@ export default function LoginPage() {
 
       {/* Brand */}
       <div className="absolute left-8 top-7 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-600 text-sm font-bold text-white">
-          LP
-        </div>
-        <span className="text-xl font-semibold">Broker Console</span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/swisscresta-logo.svg" alt="SwissCresta" className="h-9 w-auto" />
+        <span className="text-xl font-semibold text-zinc-300">Broker Console</span>
       </div>
 
       {/* Centered card */}
