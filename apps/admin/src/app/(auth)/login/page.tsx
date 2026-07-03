@@ -101,13 +101,13 @@ function LoginForm() {
 
       <div className="absolute left-8 top-7 z-10 flex items-center gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/swisscresta-logo.svg" alt="SwissCresta" className="h-9 w-auto" />
+        <img src="/swis_logo.png" alt="SwissCresta" className="h-10 w-10 rounded-lg" />
         <span className="text-lg font-semibold text-zinc-300">Admin</span>
       </div>
 
       <div className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 bg-black/45 p-8 shadow-2xl backdrop-blur-xl">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/swisscresta-logo.svg" alt="SwissCresta" className="mb-6 h-10 w-auto" />
+        <img src="/swis_logo.png" alt="SwissCresta" className="mb-6 h-14 w-14 rounded-xl" />
         <h1 className="text-2xl font-semibold">LP Admin Sign in</h1>
         {reason === 'idle' ? (
           <p className="mb-6 mt-1 text-sm text-amber-400">

@@ -115,7 +115,7 @@ export default function LoginPage() {
       {/* Brand */}
       <div className="absolute left-8 top-7 flex items-center gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/swisscresta-logo.svg" alt="SwissCresta" className="h-9 w-auto" />
+        <img src="/swis_logo.png" alt="SwissCresta" className="h-10 w-10 rounded-lg" />
         <span className="text-xl font-semibold text-zinc-300">Broker Console</span>
       </div>
 
@@ -123,9 +123,9 @@ export default function LoginPage() {
       <div className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 bg-black/40 p-8 shadow-2xl backdrop-blur-xl">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/swisscresta-logo.svg"
+          src="/swis_logo.png"
           alt="SwissCresta"
-          className="mb-6 h-10 w-auto"
+          className="mb-6 h-14 w-14 rounded-xl"
         />
         <h1 className="text-2xl font-semibold">Sign in</h1>
         <p className="mb-6 mt-1 text-sm text-zinc-400">Welcome back to the broker console.</p>
