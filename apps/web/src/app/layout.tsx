@@ -6,7 +6,7 @@ import { Providers } from '@/components/providers';
 import '@/styles/globals.css';
 
 export const metadata: Metadata = {
-  title: 'LP Platform — Broker Dashboard',
+  title: 'Broker Dashboard',
   description: 'Live trades, positions, and itemized charges.',
 };
 

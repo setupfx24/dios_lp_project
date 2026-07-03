@@ -6,7 +6,7 @@ import { Providers } from '@/components/providers';
 import '@/styles/globals.css';
 
 export const metadata: Metadata = {
-  title: 'LP Operator Console',
+  title: 'Admin Console',
   robots: { index: false, follow: false },
 };
 
