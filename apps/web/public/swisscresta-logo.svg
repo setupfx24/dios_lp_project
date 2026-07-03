@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="380" height="80" viewBox="0 0 380 80" fill="none" role="img" aria-label="SwissCresta">
+  <!-- Icon: red rounded square with diamond-oriented interlocking knot -->
+  <rect x="6" y="8" width="64" height="64" rx="14" fill="#EE4D2D"/>
+  <g transform="rotate(45 38 40)">
+    <!-- two interlocking square links, woven over/under -->
+    <mask id="link-weave">
+      <rect x="0" y="0" width="76" height="80" fill="#fff"/>
+      <rect x="41" y="27" width="9" height="12" fill="#000"/>
+    </mask>
+    <rect x="18" y="22" width="24" height="24" rx="4" fill="none" stroke="#fff" stroke-width="8"/>
+    <rect x="34" y="34" width="24" height="24" rx="4" fill="none" stroke="#fff" stroke-width="8" mask="url(#link-weave)"/>
+  </g>
+  <!-- Wordmark (white for the dark login card) -->
+  <text x="86" y="53" font-family="'Segoe UI', Arial, Helvetica, sans-serif" font-size="40" font-weight="700" fill="#ffffff" letter-spacing="-1.5">SwissCresta</text>
+  <!-- small red accent triangle after the wordmark -->
+  <path d="M366 51 L372 51 L369 44 Z" fill="#EE4D2D"/>
+</svg>

@@ -122,6 +122,12 @@ export default function LoginPage() {
 
       {/* Centered card */}
       <div className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 bg-black/40 p-8 shadow-2xl backdrop-blur-xl">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/swisscresta-logo.svg"
+          alt="SwissCresta"
+          className="mb-6 h-10 w-auto"
+        />
         <h1 className="text-2xl font-semibold">Sign in</h1>
         <p className="mb-6 mt-1 text-sm text-zinc-400">Welcome back to the broker console.</p>
 
