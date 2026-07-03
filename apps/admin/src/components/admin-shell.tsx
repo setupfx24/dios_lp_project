@@ -1,6 +1,6 @@
 'use client';
 
-import { BookOpen, LayoutDashboard, LineChart, LogOut, Users, Wallet } from 'lucide-react';
+import { BookOpen, LayoutDashboard, LineChart, LogOut, Menu, Users, Wallet } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -22,6 +22,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -36,7 +37,20 @@ export function AdminShell({ children }: { children: ReactNode }) {
   }
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-gradient-to-br from-red-950 via-zinc-950 to-black">
-      <aside className="flex w-60 shrink-0 flex-col border-r border-red-900/40 bg-gradient-to-b from-red-950/60 to-black/80 px-3 py-4">
+      {/* Mobile backdrop */}
+      {menuOpen && (
+        <div
+          aria-hidden
+          onClick={() => setMenuOpen(false)}
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+        />
+      )}
+      <aside
+        className={cn(
+          'fixed inset-y-0 left-0 z-50 flex h-full w-64 max-w-[80vw] shrink-0 flex-col border-r border-red-900/40 bg-gradient-to-b from-red-950 to-black px-3 py-4 transition-transform duration-200 md:static md:z-auto md:w-60 md:max-w-none md:translate-x-0 md:from-red-950/60 md:to-black/80',
+          menuOpen ? 'translate-x-0' : '-translate-x-full',
+        )}
+      >
         <div className="mb-4 flex items-center justify-center gap-2 px-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/swis_logo.png" alt="SwissCresta" className="h-8 w-8 rounded-md" />
@@ -52,6 +66,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
               <Link
                 key={href}
                 href={href}
+                onClick={() => setMenuOpen(false)}
                 className={cn(
                   'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
                   active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-accent',
@@ -77,7 +92,19 @@ export function AdminShell({ children }: { children: ReactNode }) {
         </button>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <main className="flex-1 overflow-auto p-6">{children}</main>
+        {/* Mobile top bar with hamburger */}
+        <div className="flex h-14 shrink-0 items-center gap-3 border-b border-red-900/40 px-4 md:hidden">
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            aria-label="Open menu"
+            className="-ml-1 rounded-md p-2 text-zinc-300 hover:bg-accent hover:text-white"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <span className="text-sm font-semibold text-zinc-200">SwissCresta Admin</span>
+        </div>
+        <main className="flex-1 overflow-auto p-4 sm:p-6">{children}</main>
       </div>
     </div>
   );

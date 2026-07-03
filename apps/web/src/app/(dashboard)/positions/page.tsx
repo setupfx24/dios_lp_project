@@ -63,7 +63,8 @@ export default function PositionsPage() {
             </p>
           ) : (
             <>
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] text-sm">
                 <thead className="text-left text-muted-foreground">
                   <tr>
                     <th className="py-2">Trade ID</th>
@@ -102,6 +103,7 @@ export default function PositionsPage() {
                   })}
                 </tbody>
               </table>
+              </div>
               {positions.length > 0 && (
                 <div className="mt-3 flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">

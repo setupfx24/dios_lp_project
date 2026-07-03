@@ -170,7 +170,8 @@ export default function BrokersPage() {
             <p className="text-sm text-muted-foreground">No brokers yet.</p>
           )}
           {brokers.data && brokers.data.length > 0 && (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-sm">
               <thead className="text-left text-muted-foreground">
                 <tr>
                   <th className="py-2">Name</th>
@@ -214,6 +215,7 @@ export default function BrokersPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </CardContent>
       </Card>

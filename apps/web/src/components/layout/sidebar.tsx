@@ -25,7 +25,13 @@ const NAV = [
   { href: '/charges', label: 'Commissions', icon: Percent },
 ];
 
-export function Sidebar() {
+export function Sidebar({
+  open = false,
+  onClose,
+}: {
+  open?: boolean;
+  onClose?: () => void;
+}) {
   const pathname = usePathname();
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -42,7 +48,21 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="flex h-full w-56 shrink-0 flex-col border-r border-red-900/30 bg-gradient-to-b from-red-950/60 to-black/80 px-3 py-4">
+    <>
+      {/* Mobile backdrop — tap outside to close the drawer */}
+      {open && (
+        <div
+          aria-hidden
+          onClick={onClose}
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+        />
+      )}
+      <aside
+        className={cn(
+          'fixed inset-y-0 left-0 z-50 flex h-full w-64 max-w-[80vw] shrink-0 flex-col border-r border-red-900/30 bg-gradient-to-b from-red-950 to-black px-3 py-4 transition-transform duration-200 md:static md:z-auto md:w-56 md:max-w-none md:translate-x-0 md:from-red-950/60 md:to-black/80',
+          open ? 'translate-x-0' : '-translate-x-full',
+        )}
+      >
       <div className="mb-6 flex items-center gap-2 px-2">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/swis_logo.png" alt="SwissCresta" className="h-8 w-8 shrink-0 rounded-md" />
@@ -60,6 +80,7 @@ export function Sidebar() {
             <Link
               key={href}
               href={href}
+              onClick={onClose}
               className={cn(
                 'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
                 active
@@ -82,6 +103,7 @@ export function Sidebar() {
         <LogOut className="h-4 w-4 shrink-0" />
         {loggingOut ? 'Logging out…' : 'Logout'}
       </button>
-    </aside>
+      </aside>
+    </>
   );
 }

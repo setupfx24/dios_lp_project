@@ -40,7 +40,8 @@ export default function InstrumentsPage() {
               No instruments yet — they appear here as trades are forwarded.
             </p>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[480px] text-sm">
               <thead className="text-left text-muted-foreground">
                 <tr>
                   <th className="py-2">Symbol</th>
@@ -60,6 +61,7 @@ export default function InstrumentsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </CardContent>
       </Card>

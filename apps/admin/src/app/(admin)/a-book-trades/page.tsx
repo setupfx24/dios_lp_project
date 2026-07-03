@@ -76,7 +76,8 @@ export default function ABookTradesPage() {
           ) : filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground">No A-Book trades match your filters.</p>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-sm">
               <thead className="text-left text-muted-foreground">
                 <tr>
                   <th className="py-2">Time</th>
@@ -112,6 +113,7 @@ export default function ABookTradesPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
           {!q.isLoading && filtered.length > 0 && (
             <div className="mt-4 flex items-center justify-between">

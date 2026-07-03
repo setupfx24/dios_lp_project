@@ -104,7 +104,8 @@ export default function DepositsPage() {
           ) : items.length === 0 ? (
             <p className="text-sm text-muted-foreground">No deposit requests in this view.</p>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-sm">
               <thead className="text-left text-muted-foreground">
                 <tr>
                   <th className="py-2">Date</th>
@@ -167,6 +168,7 @@ export default function DepositsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </CardContent>
       </Card>
