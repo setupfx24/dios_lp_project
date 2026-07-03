@@ -49,6 +49,9 @@ export function Sidebar() {
         <span className="whitespace-nowrap text-base font-semibold text-white">
           SwissCresta
         </span>
+        <span className="rounded-full border border-red-500/40 bg-red-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-red-300">
+          Broker
+        </span>
       </div>
       <nav className="flex flex-col gap-1">
         {NAV.map(({ href, label, icon: Icon }) => {

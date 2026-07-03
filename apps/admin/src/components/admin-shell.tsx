@@ -41,6 +41,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/swis_logo.png" alt="SwissCresta" className="h-8 w-8 rounded-md" />
           <span className="text-lg font-semibold text-zinc-200">SwissCresta</span>
+          <span className="rounded-full border border-red-500/40 bg-red-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-red-300">
+            Admin
+          </span>
         </div>
         <nav className="flex flex-col gap-1">
           {NAV.map(({ href, label, icon: Icon }) => {
