@@ -29,6 +29,7 @@ WORKDIR /app
 RUN addgroup -S app && adduser -S app -G app
 COPY --from=build --chown=app:app /repo/apps/admin/.next/standalone ./
 COPY --from=build --chown=app:app /repo/apps/admin/.next/static ./apps/admin/.next/static
+COPY --from=build --chown=app:app /repo/apps/admin/public ./apps/admin/public
 USER app
 EXPOSE 3002
 CMD ["node", "apps/admin/server.js"]

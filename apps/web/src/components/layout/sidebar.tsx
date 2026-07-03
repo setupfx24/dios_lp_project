@@ -43,9 +43,11 @@ export function Sidebar() {
 
   return (
     <aside className="flex h-full w-56 shrink-0 flex-col border-r border-red-900/30 bg-gradient-to-b from-red-950/60 to-black/80 px-3 py-4">
-      <div className="mb-6 px-2">
+      <div className="mb-6 flex items-center gap-2 px-2">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/swis_logo.png" alt="SwissCresta" className="h-8 w-8 shrink-0 rounded-md" />
         <span className="whitespace-nowrap text-base font-semibold text-white">
-          Dios Broker Console
+          Broker Console
         </span>
       </div>
       <nav className="flex flex-col gap-1">
