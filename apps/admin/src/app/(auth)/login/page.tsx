@@ -107,7 +107,7 @@ function LoginForm() {
 
       <div className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 bg-black/45 p-8 shadow-2xl backdrop-blur-xl">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/swis_logo.png" alt="SwissCresta" className="mb-6 h-14 w-14 rounded-xl" />
+        <img src="/swis_logo.png" alt="SwissCresta" className="mx-auto mb-6 block h-14 w-14 rounded-xl" />
         <h1 className="text-2xl font-semibold">LP Admin Sign in</h1>
         {reason === 'idle' ? (
           <p className="mb-6 mt-1 text-sm text-amber-400">

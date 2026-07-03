@@ -125,7 +125,7 @@ export default function LoginPage() {
         <img
           src="/swis_logo.png"
           alt="SwissCresta"
-          className="mb-6 h-14 w-14 rounded-xl"
+          className="mx-auto mb-6 block h-14 w-14 rounded-xl"
         />
         <h1 className="text-2xl font-semibold">Sign in</h1>
         <p className="mb-6 mt-1 text-sm text-zinc-400">Welcome back to the broker console.</p>
