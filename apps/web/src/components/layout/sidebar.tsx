@@ -47,7 +47,7 @@ export function Sidebar() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/swis_logo.png" alt="SwissCresta" className="h-8 w-8 shrink-0 rounded-md" />
         <span className="whitespace-nowrap text-base font-semibold text-white">
-          Broker Console
+          SwissCresta
         </span>
       </div>
       <nav className="flex flex-col gap-1">

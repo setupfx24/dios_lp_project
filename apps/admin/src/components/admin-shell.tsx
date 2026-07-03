@@ -40,7 +40,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         <div className="mb-4 flex items-center justify-center gap-2 px-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/swis_logo.png" alt="SwissCresta" className="h-8 w-8 rounded-md" />
-          <span className="text-lg font-semibold text-zinc-200">Admin</span>
+          <span className="text-lg font-semibold text-zinc-200">SwissCresta</span>
         </div>
         <nav className="flex flex-col gap-1">
           {NAV.map(({ href, label, icon: Icon }) => {
