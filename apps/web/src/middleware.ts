@@ -17,5 +17,8 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png|api).*)'],
+  // Exclude Next internals, /api, and any static image asset (public/ files like
+  // swis_logo.png, app/icon.png, …) so the auth redirect doesn't intercept them
+  // (otherwise /swis_logo.png 307-redirects to /login → broken logo image).
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|svg|jpg|jpeg|gif|webp|ico)|api).*)'],
 };
