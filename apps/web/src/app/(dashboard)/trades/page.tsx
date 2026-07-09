@@ -22,6 +22,41 @@ function usd(n: number): string {
   return `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+// Signed P&L: "+$12.34" / "-$5.00".
+function fmtPnl(n: number): string {
+  const sign = n >= 0 ? '+' : '-';
+  return `${sign}$${Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+/**
+ * Realized P&L per trade. A trade is a CLOSE leg when its clientOrderId ends
+ * with "-C" (DIOS sends the close as "<openTradeId>-C"); we match it back to
+ * the OPEN leg and compute (close-open)×qty in the position's direction.
+ * OPEN legs have no realized P&L yet → null (shown as "—").
+ */
+function buildPnlMap(all: readonly TradeListItem[]): Map<string, number | null> {
+  const openById = new Map(all.map((t) => [t.tradeId, t] as const));
+  const m = new Map<string, number | null>();
+  for (const t of all) {
+    const isClose = t.clientOrderId?.endsWith('-C');
+    if (!isClose || !t.clientOrderId) {
+      m.set(t.tradeId, null);
+      continue;
+    }
+    const open = openById.get(t.clientOrderId.slice(0, -2));
+    if (!open) {
+      m.set(t.tradeId, null);
+      continue;
+    }
+    const qty = Number(t.quantity);
+    const openPrice = Number(open.price);
+    const closePrice = Number(t.price);
+    const long = open.side === 'BUY';
+    m.set(t.tradeId, (long ? closePrice - openPrice : openPrice - closePrice) * qty);
+  }
+  return m;
+}
+
 export default function TradesPage() {
   const { data, isLoading, error } = useTrades({ limit: 500 });
   const [q, setQ] = useState('');
@@ -67,6 +102,8 @@ export default function TradesPage() {
   const currentPage = Math.min(page, totalPages);
   const paged = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
+  const pnlByTrade = useMemo(() => buildPnlMap(all), [all]);
+
   const totalVolume = all.reduce((s, t) => s + Number(t.quantity), 0);
   const notional = all.reduce((s, t) => s + Number(t.quantity) * Number(t.price), 0);
   const buys = all.filter((t) => t.side === 'BUY').length;
@@ -77,7 +114,7 @@ export default function TradesPage() {
       <PageHeader
         title="Trades"
         subtitle="Executed trades — append-only and hash-chained on the server."
-        actions={<PdfButton trades={filtered} from={from} to={to} />}
+        actions={<PdfButton trades={filtered} pnlByTrade={pnlByTrade} from={from} to={to} />}
       />
 
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
@@ -195,7 +232,7 @@ export default function TradesPage() {
                 <Th className="text-right">Qty</Th>
                 <Th className="text-right">Price</Th>
                 <Th className="text-right">Charges</Th>
-                <Th className="text-right">Value</Th>
+                <Th className="text-right">P&amp;L</Th>
               </tr>
             </thead>
             <tbody>
@@ -222,7 +259,15 @@ export default function TradesPage() {
                   <Td className="text-right">{t.price}</Td>
                   <Td className="text-right">{usd(Number(t.chargesTotal ?? 0))}</Td>
                   <Td className="text-right font-medium">
-                    {usd(Number(t.quantity) * Number(t.price))}
+                    {(() => {
+                      const pnl = pnlByTrade.get(t.tradeId);
+                      if (pnl == null) return <span className="text-zinc-500">—</span>;
+                      return (
+                        <span className={pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}>
+                          {fmtPnl(pnl)}
+                        </span>
+                      );
+                    })()}
                   </Td>
                 </tr>
               ))}
@@ -270,10 +315,12 @@ const esc = (v: unknown): string =>
  */
 function PdfButton({
   trades,
+  pnlByTrade,
   from,
   to,
 }: {
   trades: readonly TradeListItem[];
+  pnlByTrade: Map<string, number | null>;
   from: string;
   to: string;
 }) {
@@ -282,7 +329,8 @@ function PdfButton({
     const generated = new Date().toLocaleString();
     const rows = trades
       .map((t) => {
-        const value = (Number(t.quantity) * Number(t.price)).toFixed(2);
+        const pnl = pnlByTrade.get(t.tradeId);
+        const pnlText = pnl == null ? '—' : fmtPnl(pnl);
         const tStatus = t.clientOrderId?.endsWith('-C') ? 'CLOSE' : 'OPEN';
         return `<tr>
           <td>${esc(formatDateTime(t.executedAt))}</td>
@@ -295,7 +343,7 @@ function PdfButton({
           <td class="r">${esc(Number(t.quantity).toFixed(2))}</td>
           <td class="r">${esc(t.price)}</td>
           <td class="r">${esc(t.chargesTotal ?? '0')}</td>
-          <td class="r">${esc(value)}</td>
+          <td class="r">${esc(pnlText)}</td>
         </tr>`;
       })
       .join('');
@@ -317,7 +365,7 @@ function PdfButton({
         <thead><tr>
           <th>Time</th><th>Trade ID</th><th>User</th><th>User ID</th><th>Symbol</th>
           <th>Side</th><th>Status</th><th class="r">Qty</th><th class="r">Price</th>
-          <th class="r">Charges</th><th class="r">Value</th>
+          <th class="r">Charges</th><th class="r">P&amp;L</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>

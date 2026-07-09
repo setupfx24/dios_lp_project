@@ -19,7 +19,7 @@ import { lp } from '@/lib/sdk';
 const NAV = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/wallet', label: 'Wallet', icon: Wallet },
-  { href: '/trades', label: 'Trades', icon: Receipt },
+  { href: '/trades', label: 'Trade Settlement', icon: Receipt },
   { href: '/positions', label: 'Positions', icon: Activity },
   { href: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
   { href: '/charges', label: 'Commissions', icon: Percent },
