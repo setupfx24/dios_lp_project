@@ -105,7 +105,11 @@ export default function TradesPage() {
   const pnlByTrade = useMemo(() => buildPnlMap(all), [all]);
 
   const totalVolume = all.reduce((s, t) => s + Number(t.quantity), 0);
-  const notional = all.reduce((s, t) => s + Number(t.quantity) * Number(t.price), 0);
+  // Net P&L = realized (closed-trade) P&L minus all charges — matches the
+  // dashboard's "Net P&L (after charges)" convention.
+  const rawPnl = all.reduce((s, t) => s + (pnlByTrade.get(t.tradeId) ?? 0), 0);
+  const totalCharges = all.reduce((s, t) => s + Number(t.chargesTotal ?? 0), 0);
+  const netPnl = rawPnl - totalCharges;
   const buys = all.filter((t) => t.side === 'BUY').length;
   const sells = all.length - buys;
 
@@ -127,7 +131,12 @@ export default function TradesPage() {
           accent="purple"
           icon={BarChart3}
         />
-        <StatCard label="Notional" value={usd(notional)} accent="cyan" icon={TrendingUp} />
+        <StatCard
+          label="Net P&L"
+          value={fmtPnl(netPnl)}
+          accent={netPnl >= 0 ? 'green' : 'red'}
+          icon={TrendingUp}
+        />
       </div>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row">
