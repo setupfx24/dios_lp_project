@@ -19,6 +19,11 @@ RUN corepack enable
 WORKDIR /repo
 COPY --from=deps /repo ./
 COPY . .
+# NEXT_PUBLIC_API_URL is inlined into the client bundle at BUILD time. Bake the
+# prod API origin here (overridable via --build-arg) so admin calls
+# api.swistrade.com, not the localhost fallback in the app code.
+ARG NEXT_PUBLIC_API_URL=https://api.swistrade.com
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 RUN pnpm --filter @lp/types --filter @lp/constants --filter @lp/utils \
         --filter @lp/validators --filter @lp/sdk build && \
     NEXT_OUTPUT=standalone pnpm --filter @lp/admin build
